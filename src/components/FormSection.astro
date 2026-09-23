@@ -1,0 +1,13 @@
+---
+/* Bandeau bleu pâle avec le questionnaire à droite. */
+import Questionnaire from "./Questionnaire.astro";
+import type { GoalId } from "../data/questionnaire";
+interface Props { eyebrow: string; title: string; lead: string; goal: GoalId }
+const { eyebrow, title, lead, goal } = Astro.props;
+---
+<section class="form-sec" id="formulaire">
+  <div class="wrap form-grid">
+    <div class="sec-head"><span class="eyebrow">{eyebrow}</span><h2>{title}</h2><p class="lead">{lead}</p></div>
+    <Questionnaire goal={goal} />
+  </div>
+</section>

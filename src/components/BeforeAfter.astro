@@ -1,0 +1,22 @@
+---
+/* Curseur avant / après : glisser pour comparer. */
+import RoomMedia from "./RoomMedia.astro";
+import type { RoomKind } from "../data/gallery";
+interface Props { before?: string; after?: string; kind: RoomKind; seed: number; label: string; big?: boolean; id?: string; hidden?: boolean }
+const { before, after, kind, seed, label, big = false, id, hidden } = Astro.props;
+const w = big ? 1200 : 800, h = big ? 900 : 600;
+---
+<div class="ba" style="--pos:50%" id={id} hidden={hidden}>
+  <RoomMedia photo={before} kind={kind} seed={seed} after={false} alt={`Avant travaux : ${label}`} width={w} height={h} />
+  <RoomMedia photo={after} kind={kind} seed={seed} after alt={`Après travaux : ${label}`} class="after" width={w} height={h} />
+  <div class="handle"></div>
+  <span class="lab l">Avant</span><span class="lab r">Après</span>
+  <input type="range" min="0" max="100" value="50" aria-label={`Comparer avant et après : ${label}`}>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>(".ba").forEach((ba) => {
+    const r = ba.querySelector("input")!;
+    r.addEventListener("input", () => ba.style.setProperty("--pos", r.value + "%"));
+  });
+</script>

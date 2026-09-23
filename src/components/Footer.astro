@@ -1,0 +1,17 @@
+---
+import { SITE, phoneDisplay, waLink } from "../data/site";
+import { CITIES } from "../data/cities";
+import { questionnaireLink } from "../data/questionnaire";
+---
+<footer>
+  <div class="wrap foot">
+    <div>
+      <b style="color:var(--ink)">{SITE.name}</b> {SITE.provisional && <span class="ph">nom provisoire</span>}<br>
+      Immobilier, investissement et rénovation en Israël depuis {SITE.years} ans.<br>
+      WhatsApp : <a href={waLink()} target="_blank" rel="noopener" style="color:inherit">{phoneDisplay()}</a> {SITE.provisional && <span class="ph">numéro provisoire</span>}<br>
+      E‑mail : <a href={`mailto:${SITE.email}`} style="color:inherit">{SITE.email}</a>
+    </div>
+    <div class="foot-col"><b>Nos services</b><a href="/alyah">Alyah</a><a href="/investissement">Investissement locatif</a><a href="/coup-de-fusil">Coup de fusil</a><a href={questionnaireLink("olim")}>Trouver ma ville</a><a href="/simulateur">Simulateur</a><a href="/realisations">Réalisations</a></div>
+    <div class="foot-col"><b>Villes</b><div class="foot-cities">{CITIES.map((c) => <a href={`/villes/${c.id}`}>{c.name}</a>)}</div></div>
+  </div>
+</footer>

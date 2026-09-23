@@ -1,0 +1,128 @@
+---
+import Base from "../layouts/Base.astro";
+import CityCard from "../components/CityCard.astro";
+import Gallery from "../components/Gallery.astro";
+import RoomMedia from "../components/RoomMedia.astro";
+import { SITE } from "../data/site";
+import { CITIES, HOME_CITIES } from "../data/cities";
+import { GALLERY } from "../data/gallery";
+import { questionnaireLink } from "../data/questionnaire";
+const olim = questionnaireLink("olim");
+---
+<Base title="Immobilier en Israël, en français" description={`Acheter ou louer pour votre alyah, investir dans le locatif ou rénover pour revendre en Israël : une équipe francophone avec avocats, architectes et artisans depuis ${SITE.years} ans.`}>
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <span class="eyebrow">Immobilier en Israël, en français</span>
+        <h1>Votre maison en Israël, <em>de la première visite à la remise des clés.</em></h1>
+        <p class="lead">Acheter ou louer pour votre alyah, investir dans le locatif ou réaliser une opération achat‑rénovation‑revente : une seule équipe, avec nos avocats, nos architectes et nos artisans, depuis {SITE.years} ans.</p>
+        <div class="cta">
+          <a class="btn btn-primary btn-lg" href={olim}><svg aria-hidden="true"><use href="#pin" /></svg>Trouver ma ville en Israël</a>
+          <a class="btn btn-ghost btn-lg" href="/simulateur">Simuler un budget</a>
+        </div>
+        <p class="cta-hint">Famille, pratique religieuse, travail, santé, budget : répondez en quelques minutes et découvrez les villes faites pour vous.</p>
+        <div class="proof">
+          <div><b>{SITE.years} ans</b><span>d’accompagnement en Israël</span></div>
+          <div><b>Avocats</b><span>intégrés au dossier</span></div>
+          <div><b>Tous corps</b><span>de métier pour les travaux</span></div>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <RoomMedia photo={SITE.heroPhoto || undefined} kind="kitchen" seed={11} alt="Appartement rénové, cuisine bleue et lumineuse" width={1000} height={800} eager />
+        <div class="tag"><b>Netanya · 4 pièces</b><small>Rénové en 5 mois · exemple</small></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">Trois façons d’avancer</span>
+        <h2>Un projet, une équipe, du début à la fin.</h2>
+      </div>
+      <div class="pillars">
+        <article class="pillar">
+          <span class="he" lang="he">עלייה</span>
+          <h3>Alyah : acheter ou louer votre logement</h3>
+          <p>Pour vous installer sereinement, que vous soyez encore en France ou déjà en Israël.</p>
+          <ul>
+            <li>Recherche ciblée selon votre ville, votre budget et l’école des enfants</li>
+            <li>Visites en vidéo si vous êtes encore à l’étranger</li>
+            <li>Vérification juridique du bien par notre avocat</li>
+          </ul>
+          <a class="btn btn-primary" href="/alyah" aria-label="Découvrir : Alyah">Découvrir</a>
+        </article>
+        <article class="pillar">
+          <span class="he" lang="he">השקעה</span>
+          <h3>Investissement locatif</h3>
+          <p>Acheter pour louer, ou revendre un bien en portefeuille, avec des chiffres clairs.</p>
+          <ul>
+            <li>Sélection des quartiers selon le rendement</li>
+            <li>Étude de rentabilité avant chaque offre</li>
+            <li>Recherche de locataires et gestion sur place</li>
+          </ul>
+          <a class="btn btn-primary" href="/investissement" aria-label="Découvrir : investissement locatif">Découvrir</a>
+        </article>
+        <article class="pillar featured">
+          <span class="he" lang="he">שיפוץ</span>
+          <h3>Coup de fusil : acheter, rénover, revendre</h3>
+          <p>On repère le bien sous‑évalué, on le transforme entièrement, on le revend avec une plus‑value.</p>
+          <ul>
+            <li>Repérage et négociation d’affaires</li>
+            <li>Plans par notre architecte, travaux tous corps de métier</li>
+            <li>Mise en vente et partage de la plus‑value</li>
+          </ul>
+          <a class="btn btn-primary" href="/coup-de-fusil" aria-label="Découvrir : coup de fusil">Découvrir</a>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap band-in">
+      <div>
+        <span class="eyebrow">Trouver ma ville</span>
+        <h2>Où vivre en Israël ? Répondez, on vous conseille.</h2>
+        <p class="lead">Un questionnaire complet sur votre famille, votre pratique, votre travail, votre santé et votre budget. À la fin, les villes qui vous correspondent le mieux, avec les raisons.</p>
+      </div>
+      <a class="btn btn-primary btn-lg" href={olim}>Commencer le questionnaire</a>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="sec-head row-head">
+        <div><span class="eyebrow">Toute Israël, surtout les grandes villes</span><h2>Nos villes</h2></div>
+        <a class="btn btn-ghost" href="/villes">Toutes les villes</a>
+      </div>
+      <div class="city-grid">
+        {HOME_CITIES.map((id) => CITIES.find((c) => c.id === id)).filter((c) => !!c).map((c) => <CityCard city={c} />)}
+      </div>
+    </div>
+  </section>
+
+  <section class="flip">
+    <div class="wrap">
+      <div class="sec-head row-head">
+        <div><span class="eyebrow">Réalisations et témoignages</span><h2>Ils nous ont fait confiance.</h2></div>
+        <a class="btn btn-ghost" href="/realisations">Toutes les réalisations</a>
+      </div>
+      <Gallery items={GALLERY.slice(0, 3)} />
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">Pourquoi nous</span>
+        <h2>{SITE.years} ans sur le terrain, une équipe sous le même toit.</h2>
+      </div>
+      <div class="why">
+        <div><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v18M5 7h14M7 7l-3 7a3 3 0 0 0 6 0L7 7Zm10 0-3 7a3 3 0 0 0 6 0l-3-7Z"/></svg></span><h3>Avocats</h3><p>Chaque achat et chaque vente passent par nos avocats : vérification du Tabou, contrats, taxes.</p></div>
+        <div><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m14 6 4 4M3 21l3-1 12-12-2-2L4 18l-1 3Z"/></svg></span><h3>Artisans</h3><p>Maçons, électriciens, plombiers, menuisiers : des équipes avec qui nous travaillons depuis des années.</p></div>
+        <div><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V9l8-5 8 5v11M9 20v-6h6v6"/></svg></span><h3>Toute Israël</h3><p>Priorité aux grandes villes : Jérusalem, Tel Aviv, Netanya, Ashdod, Haïfa, Ra’anana et plus.</p></div>
+        <div><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 5h16v11H8l-4 4V5Z"/></svg></span><h3>En français</h3><p>Un interlocuteur unique qui parle votre langue, joignable sur WhatsApp.</p></div>
+      </div>
+    </div>
+  </section>
+</Base>

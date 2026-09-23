@@ -1,0 +1,14 @@
+---
+/* Fil d'Ariane (avec données structurées pour Google). */
+interface Props { items: { label: string; href?: string }[] }
+const { items } = Astro.props;
+const all = [{ label: "Accueil", href: "/" }, ...items];
+const ld = {
+  "@context": "https://schema.org", "@type": "BreadcrumbList",
+  itemListElement: all.map((it, i) => ({ "@type": "ListItem", position: i + 1, name: it.label, ...(it.href ? { item: new URL(it.href, Astro.site).href } : {}) })),
+};
+---
+<nav class="crumbs" aria-label="Fil d’Ariane">
+  <ol>{all.map((it) => <li>{it.href ? <a href={it.href}>{it.label}</a> : <span aria-current="page">{it.label}</span>}</li>)}</ol>
+</nav>
+<script type="application/ld+json" set:html={JSON.stringify(ld)} />

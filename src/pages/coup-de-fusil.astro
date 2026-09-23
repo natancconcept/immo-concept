@@ -1,0 +1,66 @@
+---
+import Base from "../layouts/Base.astro";
+import Crumbs from "../components/Crumbs.astro";
+import Steps from "../components/Steps.astro";
+import Simulator from "../components/Simulator.astro";
+import BeforeAfter from "../components/BeforeAfter.astro";
+import FormSection from "../components/FormSection.astro";
+import { PROJECTS } from "../data/gallery";
+import { shekK } from "../lib/format";
+---
+<Base title="Coup de fusil : acheter, rénover, revendre en Israël" description="Opérations achat‑rénovation‑revente en Israël : repérage d’un bien sous‑évalué, plans par notre architecte, travaux tous corps de métier, revente et partage de la plus‑value.">
+  <section class="page-hero">
+    <div class="wrap">
+      <Crumbs items={[{ label: "Coup de fusil" }]} />
+      <span class="he big-he" lang="he">שיפוץ</span>
+      <h1>Coup de fusil : acheter, rénover, revendre</h1>
+      <p class="lead">On repère un bien sous‑évalué, notre architecte le repense, nos artisans le transforment entièrement, puis on le revend avec une plus‑value. Vous suivez tout, du début à la fin.</p>
+      <div class="cta"><a class="btn btn-primary btn-lg" href="#formulaire">Proposer une opération</a></div>
+    </div>
+  </section>
+  <section>
+    <div class="wrap">
+      <div class="sec-head"><span class="eyebrow">Étape par étape</span><h2>On s’occupe de tout, vous suivez l’avancement.</h2><p class="lead">Chaque étape est tenue par un professionnel de notre équipe. Vous recevez photos et comptes rendus sur WhatsApp.</p></div>
+      <Steps items={[
+        { title: "Achat", text: "Repérage d’un bien sous le prix du marché, négociation, compromis.", who: "Agent + avocat" },
+        { title: "Architecture", text: "Nouveaux plans, choix des matériaux, demandes de permis si besoin.", who: "Architecte" },
+        { title: "Travaux", text: "Maçonnerie, électricité, plomberie, cuisine, sols, peinture.", who: "Tous corps de métier" },
+        { title: "Revente", text: "Photos professionnelles, mise en vente, visites et négociation.", who: "Agent" },
+        { title: "Plus‑value", text: "Signature chez l’avocat et répartition du bénéfice selon le contrat.", who: "Avocat" },
+      ]} />
+    </div>
+  </section>
+  <section class="flip">
+    <div class="wrap">
+      <div class="sec-head"><span class="eyebrow">Simulateur</span><h2>Combien peut rapporter une opération ?</h2></div>
+      <Simulator mode="flip" />
+    </div>
+  </section>
+  <section>
+    <div class="wrap">
+      <div class="sec-head"><span class="eyebrow">Avant / Après</span><h2>Glissez pour voir la transformation.</h2>{PROJECTS.some((p) => p.demo) && <p class="lead">Visuels et chiffres d’exemple, à remplacer par vos vrais chantiers.</p>}</div>
+      <div class="ba-grid" id="flipProjects">
+        <div>
+          {PROJECTS.map((p, i) => (
+            <div class="proj-view" data-i={i} hidden={i !== 0}>
+              <BeforeAfter before={p.before} after={p.after} kind={p.kind} seed={p.seed} label={`${p.title}, ${p.city}`} big />
+              <div class="figs"><div><small>Achat</small><b>{shekK(p.buy)}</b></div><div><small>Travaux</small><b>{shekK(p.works)}</b></div><div><small>Revente</small><b>{shekK(p.sale)}</b></div><div><small>Durée</small><b>{p.months} mois</b></div></div>
+            </div>
+          ))}
+        </div>
+        <div class="projects">
+          {PROJECTS.map((p, i) => <button type="button" class="proj" data-i={i} aria-pressed={i === 0 ? "true" : "false"}><b>{p.title}</b><span class="meta">{p.city} · {p.months} mois de travaux {p.demo && <>· <span class="ph">exemple</span></>}</span></button>)}
+        </div>
+      </div>
+    </div>
+  </section>
+  <FormSection eyebrow="Votre projet" title="Participer à une opération." lead="Dites‑nous votre capital et votre horizon, on vous présente les prochaines opérations." goal="flip" />
+</Base>
+
+<script>
+  const root = document.getElementById("flipProjects")!;
+  root.querySelectorAll<HTMLButtonElement>(".proj").forEach((b) => b.addEventListener("click", () => {
+    root.querySelectorAll<HTMLElement>(".proj-view").forEach((v) => (v.hidden = v.dataset.i !== b.dataset.i));
+    root.querySelectorAll(".proj").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  }));
+</script>

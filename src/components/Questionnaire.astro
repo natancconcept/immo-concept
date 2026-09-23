@@ -1,0 +1,237 @@
+---
+/* Questionnaire « Trouver ma ville » : choix du projet, étapes, coordonnées, puis résultat.
+   `goal` choisit le projet d'avance (pages Alyah, Investissement, Coup de fusil).
+   Sur /trouver-ma-ville, l'adresse peut le préciser : ?projet=alyah | investissement | coup-de-fusil */
+import type { GoalId } from "../data/questionnaire";
+interface Props { goal?: GoalId; readQuery?: boolean }
+const { goal, readQuery = false } = Astro.props;
+---
+<div class="form-card" id="formCard" data-goal={goal} data-read-query={readQuery ? "1" : undefined}>
+  <div class="progress" id="progress" aria-hidden="true"></div>
+  <form id="leadForm" novalidate>
+    <noscript><p>Le questionnaire a besoin de JavaScript. Vous pouvez aussi nous écrire directement sur WhatsApp.</p></noscript>
+  </form>
+</div>
+
+<script>
+  import { GOALS, type Answers, type GoalId, type Question } from "../data/questionnaire";
+  import { SITE, phoneDisplay, waLink } from "../data/site";
+  import { recommend, profileText, isRent, budgetRange, type Reco } from "../lib/recommend";
+  import { fmt, esc } from "../lib/format";
+
+  const card = document.getElementById("formCard");
+  const form = document.getElementById("leadForm") as HTMLFormElement | null;
+  if (card && form) {
+    interface State { step: number; goal: GoalId | null; a: Answers; name: string; phone: string; email: string; msg: string }
+    const blank = (): State => ({ step: 0, goal: null, a: {}, name: "", phone: "", email: "", msg: "" });
+    const STORE = "cc-questionnaire";
+
+    // Projet imposé par la page, ou par l'adresse (?projet=alyah).
+    let forced: GoalId | null = (card.dataset.goal as GoalId) || null;
+    if (!forced && card.dataset.readQuery) {
+      const slug = new URLSearchParams(location.search).get("projet");
+      forced = (Object.keys(GOALS) as GoalId[]).find((k) => GOALS[k].slug === slug) || null;
+    }
+    // On reprend les réponses en cours (même onglet) si elles concernent le même projet.
+    let state = blank();
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(STORE) || "null") as State | null;
+      if (saved && saved.goal && GOALS[saved.goal] && (!forced || saved.goal === forced)) state = { ...blank(), ...saved };
+    } catch {}
+    if (forced && state.goal !== forced) state = { ...blank(), goal: forced, step: 1 };
+    const save = () => { try { sessionStorage.setItem(STORE, JSON.stringify(state)) } catch {} };
+
+    const pages = () => (state.goal ? GOALS[state.goal].pages : []);
+    const totalSteps = () => pages().length + 3; // choix + pages + coordonnées + résultat
+    let lastReco: Reco[] = [];
+
+    function setProgress() {
+      const n = state.goal ? totalSteps() - 1 : 4;
+      document.getElementById("progress")!.innerHTML = Array.from({ length: n }, (_, i) => `<i class="${i <= state.step ? "on" : ""}"></i>`).join("");
+    }
+
+    function fieldHTML(q: Question) {
+      const v = state.a[q.id];
+      if (q.type === "chips") return `<div class="field"><span class="lbl" id="l_${q.id}">${q.label}</span><div class="chips" role="group" aria-labelledby="l_${q.id}" data-q="${q.id}">` + q.opts!.map((o) => `<button type="button" aria-pressed="${v === o}">${o}</button>`).join("") + `</div></div>`;
+      if (q.type === "multi") return `<div class="field"><span class="lbl" id="l_${q.id}">${q.label}</span><div class="chips" role="group" aria-labelledby="l_${q.id}" data-m="${q.id}">` + q.opts!.map((o) => `<button type="button" aria-pressed="${Array.isArray(v) && v.includes(o)}">${o}</button>`).join("") + `</div></div>`;
+      if (q.type === "range") {
+        const r = budgetRange(state.a); const val = Math.min(r.max, Math.max(r.min, +(v ?? 0) || r.def)); state.a[q.id] = val;
+        return `<div class="field"><div class="range-row"><label for="q_${q.id}">${isRent(state.a) ? "Loyer maximum" : "Budget d’achat maximum"}</label><output id="o_${q.id}">${fmt(val) + r.unit}</output></div><input type="range" id="q_${q.id}" data-r="${q.id}" min="${r.min}" max="${r.max}" step="${r.step}" value="${val}"></div>`;
+      }
+      return `<div class="field"><label for="q_${q.id}">${q.label}</label><input type="text" ${q.num ? 'inputmode="numeric"' : ""} id="q_${q.id}" data-q="${q.id}" placeholder="${q.ph || ""}" value="${esc(v || "")}"></div>`;
+    }
+
+    function renderForm() {
+      setProgress();
+      const P = pages(), s = state.step;
+      let h = "";
+      if (s === 0) {
+        h = `<h3 style="margin-bottom:14px">Quel est votre projet ?</h3><div class="choices">` +
+          (Object.entries(GOALS) as [GoalId, (typeof GOALS)[GoalId]][]).map(([k, g]) => `<button type="button" class="choice" data-goal="${k}" aria-pressed="${state.goal === k}"><span class="he" lang="he">${g.he}</span><span><b>${g.label}</b><span>${g.sub}</span></span></button>`).join("") + `</div>`;
+      } else if (s <= P.length) {
+        const pg = P[s - 1];
+        h = `<p class="kicker">${GOALS[state.goal!].label} · étape ${s} sur ${P.length}</p><h3 style="margin-bottom:16px">${pg.title}</h3>` +
+          pg.q.filter((q) => !q.show || q.show(state.a)).map(fieldHTML).join("");
+      } else if (s === P.length + 1) {
+        h = `<h3 style="margin-bottom:16px">Vos coordonnées</h3>
+          <div class="row2"><div class="field"><label for="fName">Nom et prénom</label><input type="text" id="fName" autocomplete="name" value="${esc(state.name)}"></div>
+          <div class="field"><label for="fPhone">Téléphone / WhatsApp</label><input type="tel" id="fPhone" autocomplete="tel" placeholder="+33 6… ou +972 5…" value="${esc(state.phone)}"></div></div>
+          <div class="field"><label for="fEmail">E‑mail</label><input type="email" id="fEmail" autocomplete="email" value="${esc(state.email)}"></div>
+          <div class="field"><label for="fMsg">Un mot sur votre projet (facultatif)</label><textarea id="fMsg" rows="3">${esc(state.msg)}</textarea></div>`;
+      } else {
+        h = resultHTML();
+      }
+      if (s <= P.length + 1) {
+        h += `<p class="err" id="err" role="alert"></p><div class="form-nav">` +
+          (s > 0 ? `<button type="button" class="btn btn-ghost" id="back">Retour</button>` : `<span></span>`) +
+          `<button type="submit" class="btn btn-primary">${s === P.length + 1 ? (state.goal === "olim" ? "Voir mes villes" : "Voir ma demande") : "Continuer"}</button></div>`;
+      }
+      form!.innerHTML = h;
+      bindForm();
+      save();
+    }
+
+    function summaryText() {
+      const lines = [`Bonjour, je souhaite être accompagné(e).`, `Projet : ${GOALS[state.goal!].label}`, ...profileText(state.goal!, state.a)];
+      if (state.goal === "olim" && lastReco.length) lines.push(`Villes conseillées par le site : ${lastReco.slice(0, 3).map((r) => r.c.name).join(", ")}`);
+      lines.push(`Nom : ${state.name}`, `Téléphone : ${state.phone}`);
+      if (state.email) lines.push(`E‑mail : ${state.email}`);
+      if (state.msg) lines.push(`Message : ${state.msg}`);
+      return lines.join("\n");
+    }
+
+    function resultHTML() {
+      const first = esc(state.name.trim().split(" ")[0]);
+      let h = "";
+      if (state.goal === "olim") {
+        lastReco = recommend(state.a);
+        const top = lastReco.slice(0, 3);
+        h += `<p class="kicker">Votre sélection</p><h3>${first}, voici les villes qui vous correspondent le mieux.</h3>
+          <div class="recos">` + top.map((r, i) => `<article class="reco${i === 0 ? " best" : ""}">
+            <div class="reco-head"><div><b><a href="/villes/${r.c.id}">${r.c.name}</a></b><span>${r.c.region} · quartiers souvent choisis : ${r.c.hood}</span></div><div class="match"><strong>${Math.round(r.score * 100)} %</strong><small>compatibilité</small></div></div>
+            <div class="meter"><i style="width:${Math.round(r.score * 100)}%"></i></div>
+            <ul>${r.why.map((w) => `<li>${w}</li>`).join("")}</ul>
+            ${r.warn ? `<p class="warn">${r.warn}</p>` : ""}
+          </article>`).join("") + `</div>
+          <p class="note">Aussi à considérer : ${lastReco.slice(3, 6).map((r) => `<a href="/villes/${r.c.id}">${r.c.name}</a> (${Math.round(r.score * 100)} %)`).join(", ")}. Ce classement est calculé à partir de vos réponses et de nos fiches villes ; un conseiller le complète avec vous.</p>
+          <div class="ai" id="aiBox" hidden>
+            <div class="ai-head"><b>Conseil personnalisé</b><span>Un texte rédigé par l’IA à partir de vos réponses</span></div>
+            <div class="ai-out" id="aiOut" aria-live="polite"></div>
+            <div class="ai-actions"><button type="button" class="btn btn-primary" id="aiGo">Obtenir le conseil de l’IA</button><button type="button" class="btn btn-ghost" id="aiStop" hidden>Arrêter</button></div>
+          </div>`;
+      } else {
+        h += `<h3>Merci ${first}, votre demande est prête.</h3><div class="summary">${esc(summaryText())}</div>`;
+      }
+      h += `<div class="send"><p>Envoyez votre demande sur WhatsApp : un conseiller vous répond en français.</p>
+          <a class="btn btn-wa" href="${esc(waLink(summaryText()))}" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa"/></svg>Envoyer sur WhatsApp</a>
+          <div class="wa-num">Ou écrivez‑nous au <code id="waNum">${phoneDisplay()}</code><button type="button" class="copy" id="copyNum">Copier</button>${SITE.provisional ? `<span class="ph">provisoire</span>` : ""}</div></div>
+          <div class="form-nav" style="margin-top:18px"><button type="button" class="btn btn-ghost" id="editAns">Modifier mes réponses</button><button type="button" class="btn btn-ghost" id="restart">Nouvelle demande</button></div>`;
+      return h;
+    }
+
+    /* ---------- Conseil rédigé par l'IA (route serveur /api/conseil) ---------- */
+    let aiAvailable: Promise<boolean> | null = null, aiCtl: AbortController | null = null;
+    const AI_ERRORS: Record<string, string> = {
+      rate_limited: "Trop de demandes pour le moment. Réessayez dans quelques minutes.",
+      default: "Le conseil n’a pas pu être rédigé. Vous pouvez réessayer.",
+    };
+    function setupAI() {
+      const box = document.getElementById("aiBox"); if (!box) return;
+      aiAvailable ||= fetch("/api/conseil").then((r) => (r.ok ? r.json() : { enabled: false })).then((j) => !!j.enabled).catch(() => false);
+      aiAvailable.then((ok) => {
+        if (!ok || !document.body.contains(box)) return;
+        box.hidden = false;
+        const out = document.getElementById("aiOut")!, go = document.getElementById("aiGo") as HTMLButtonElement, stop = document.getElementById("aiStop")!;
+        stop.onclick = () => aiCtl?.abort();
+        go.onclick = async () => {
+          aiCtl = new AbortController(); go.disabled = true; stop.hidden = false; out.textContent = "Réflexion en cours…";
+          let text = "", error = "";
+          try {
+            const res = await fetch("/api/conseil", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ answers: state.a }), signal: aiCtl.signal });
+            if (!res.ok || !res.body) {
+              const j = await res.json().catch(() => ({}));
+              if (j.error === "disabled") { box.hidden = true; return }
+              error = j.error || "default";
+            } else {
+              // Réponse en flux : une ligne JSON par morceau de texte.
+              const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+              let buf = "";
+              for (;;) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                buf += value;
+                const lines = buf.split("\n"); buf = lines.pop()!;
+                for (const l of lines) {
+                  if (!l.trim()) continue;
+                  const ev = JSON.parse(l);
+                  if (ev.t) { text += ev.t; out.textContent = text }
+                  if (ev.error) error = ev.error;
+                }
+              }
+            }
+          } catch (e) {
+            if ((e as Error).name !== "AbortError") error = "default";
+          } finally {
+            if (error) out.textContent = text + (text ? "\n\n" : "") + (AI_ERRORS[error] || AI_ERRORS.default);
+            else if (!text) out.textContent = "";
+            go.disabled = false; go.textContent = "Rédiger un autre conseil"; stop.hidden = true;
+          }
+        };
+      });
+    }
+
+    function bindForm() {
+      form!.querySelectorAll<HTMLButtonElement>(".choice").forEach((b) => (b.onclick = () => {
+        const g = b.dataset.goal as GoalId;
+        if (state.goal !== g) { state.goal = g; state.a = {} }
+        state.step = 1; renderForm();
+      }));
+      form!.querySelectorAll<HTMLElement>(".chips[data-q]").forEach((box) => box.querySelectorAll("button").forEach((b) => (b.onclick = () => {
+        const id = box.dataset.q!, before = isRent(state.a);
+        state.a[id] = b.textContent!; box.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+        // certaines réponses font apparaître ou changent d'autres questions
+        if (id === "family" || id === "job" || (id === "mode" && before !== isRent(state.a))) { if (id === "mode") delete state.a.budget; renderForm() }
+        else save();
+      })));
+      form!.querySelectorAll<HTMLElement>(".chips[data-m]").forEach((box) => box.querySelectorAll("button").forEach((b) => (b.onclick = () => {
+        const id = box.dataset.m!, arr = (Array.isArray(state.a[id]) ? state.a[id] : (state.a[id] = [])) as string[], o = b.textContent!, ix = arr.indexOf(o);
+        ix < 0 ? arr.push(o) : arr.splice(ix, 1); b.setAttribute("aria-pressed", String(ix < 0)); save();
+      })));
+      form!.querySelectorAll<HTMLInputElement>("input[data-q]").forEach((i) => (i.oninput = () => { state.a[i.dataset.q!] = i.value; save() }));
+      form!.querySelectorAll<HTMLInputElement>("input[data-r]").forEach((i) => (i.oninput = () => {
+        state.a[i.dataset.r!] = +i.value; document.getElementById("o_" + i.dataset.r)!.textContent = fmt(+i.value) + budgetRange(state.a).unit; save();
+      }));
+      const bind = (id: string, key: "name" | "phone" | "email" | "msg") => { const el = document.getElementById(id) as HTMLInputElement | null; if (el) el.oninput = () => { state[key] = el.value; save() } };
+      bind("fName", "name"); bind("fPhone", "phone"); bind("fEmail", "email"); bind("fMsg", "msg");
+      const on = (id: string, fn: () => void) => { const el = document.getElementById(id); if (el) el.onclick = fn };
+      on("back", () => { state.step--; renderForm() });
+      on("editAns", () => { state.step = 1; renderForm() });
+      on("restart", () => { state = blank(); lastReco = []; renderForm() });
+      on("copyNum", () => {
+        const cp = document.getElementById("copyNum")!;
+        const p = navigator.clipboard?.writeText("+" + SITE.whatsapp);
+        if (p) p.then(() => (cp.textContent = "Copié"), selectNum); else selectNum();
+      });
+      setupAI();
+    }
+    function selectNum() { const r = document.createRange(); r.selectNodeContents(document.getElementById("waNum")!); const s = getSelection()!; s.removeAllRanges(); s.addRange(r) }
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const err = document.getElementById("err")!, P = pages(), s = state.step;
+      if (s === 0) { err.textContent = "Choisissez un type de projet pour continuer."; return }
+      if (s <= P.length) {
+        const miss = P[s - 1].q.filter((q) => q.req && (!q.show || q.show(state.a)) && (q.type === "multi" ? !(state.a[q.id] as string[] | undefined || []).length : !state.a[q.id]));
+        if (miss.length) { err.textContent = `Répondez à : ${miss[0].label.replace(/ \(.*\)/, "").toLowerCase()}.`; return }
+      }
+      if (s === P.length + 1) {
+        if (state.name.trim().length < 2) { err.textContent = "Indiquez votre nom pour que l’on sache qui rappeler."; return }
+        if (state.phone.replace(/\D/g, "").length < 8) { err.textContent = "Indiquez un numéro de téléphone complet, avec l’indicatif du pays."; return }
+      }
+      state.step++; renderForm();
+      if (card.getBoundingClientRect().top < 0) card.scrollIntoView({ block: "start" });
+    });
+
+    renderForm();
+  }
+</script>

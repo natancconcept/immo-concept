@@ -1,0 +1,32 @@
+---
+import Base from "../layouts/Base.astro";
+import Crumbs from "../components/Crumbs.astro";
+import Simulator from "../components/Simulator.astro";
+import FormSection from "../components/FormSection.astro";
+---
+<Base title="Investissement locatif en Israël" description="Investir dans le locatif en Israël : choix des quartiers selon le rendement, étude de rentabilité, recherche de locataires et gestion sur place. Simulateur de rendement par ville.">
+  <section class="page-hero">
+    <div class="wrap">
+      <Crumbs items={[{ label: "Investissement locatif" }]} />
+      <span class="he big-he" lang="he">השקעה</span>
+      <h1>Investir dans le locatif en Israël</h1>
+      <p class="lead">Acheter pour louer ou revendre un bien que vous possédez déjà : on vous montre les chiffres avant chaque décision, et on gère sur place.</p>
+      <div class="cta"><a class="btn btn-primary btn-lg" href="#formulaire">Décrire mon investissement</a></div>
+    </div>
+  </section>
+  <section>
+    <div class="wrap">
+      <div class="duo">
+        <article class="card"><h3>Acheter pour louer</h3><ul class="ticks"><li>Choix des quartiers selon le rendement et la demande locative</li><li>Étude de rentabilité chiffrée avant l’offre</li><li>Recherche de locataires, bail, état des lieux</li><li>Gestion sur place et point mensuel sur WhatsApp</li></ul></article>
+        <article class="card"><h3>Vendre votre bien</h3><ul class="ticks"><li>Estimation au prix du marché</li><li>Petits travaux de mise en valeur si utiles</li><li>Photos, annonces, visites et négociation</li><li>Signature et suivi par notre avocat</li></ul></article>
+      </div>
+    </div>
+  </section>
+  <section class="flip">
+    <div class="wrap">
+      <div class="sec-head"><span class="eyebrow">Simulateur</span><h2>Quel rendement, ville par ville ?</h2><p class="lead">Changez la ville, la surface et l’apport pour comparer.</p></div>
+      <Simulator mode="invest" />
+    </div>
+  </section>
+  <FormSection eyebrow="Votre projet" title="Parlons de votre investissement." lead="Trois questions, puis un conseiller vous envoie une première étude." goal="invest" />
+</Base>

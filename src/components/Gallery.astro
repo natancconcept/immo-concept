@@ -1,0 +1,40 @@
+---
+/* Grille de réalisations. Avec `filters`, ajoute les filtres et le bouton « Voir plus ». */
+import GalleryCard from "./GalleryCard.astro";
+import { GAL_TYPES, matchesFilter, type GalleryItem, type GalFilter } from "../data/gallery";
+interface Props { items: GalleryItem[]; filters?: boolean; perPage?: number }
+const { items, filters = false, perPage = 9 } = Astro.props;
+const keys = Object.keys(GAL_TYPES) as GalFilter[];
+---
+<div class="gallery" data-per-page={filters ? perPage : undefined}>
+  {filters && (
+    <div class="gal-filters" role="group" aria-label="Filtrer les réalisations">
+      {keys.map((k) => <button type="button" data-f={k} aria-pressed={k === "all" ? "true" : "false"}>{GAL_TYPES[k]}<small>{items.filter((g) => matchesFilter(g, k)).length}</small></button>)}
+    </div>
+  )}
+  <div class="gal">
+    {items.map((it, i) => <GalleryCard item={it} hidden={filters && i >= perPage} />)}
+  </div>
+  {filters && items.length > perPage && <div class="gal-more"><button type="button" class="btn btn-ghost">Voir plus de réalisations</button></div>}
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>(".gallery[data-per-page]").forEach((root) => {
+    const per = +root.dataset.perPage!;
+    const cards = [...root.querySelectorAll<HTMLElement>(".gcard")];
+    const btns = [...root.querySelectorAll<HTMLButtonElement>(".gal-filters button")];
+    const more = root.querySelector<HTMLElement>(".gal-more");
+    let filter = "all", shown = per;
+    const match = (c: HTMLElement) => filter === "all" || (filter === "video" ? c.dataset.video === "1" : c.dataset.type === filter);
+    const render = () => {
+      const list = cards.filter(match);
+      cards.forEach((c) => (c.hidden = true));
+      list.slice(0, shown).forEach((c) => (c.hidden = false));
+      btns.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.f === filter)));
+      if (more) more.hidden = list.length <= shown;
+    };
+    btns.forEach((b) => b.addEventListener("click", () => { filter = b.dataset.f!; shown = per; render() }));
+    more?.querySelector("button")!.addEventListener("click", () => { shown += per; render() });
+    render();
+  });
+</script>

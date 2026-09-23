@@ -1,0 +1,134 @@
+# Site de l’agence : immobilier en Israël, en français
+
+Site vitrine construit avec [Astro](https://astro.build) à partir de la maquette. Toutes les pages sont générées en HTML statique (rapide et bien référencé par Google). Une seule fonction tourne sur un serveur : `/api/conseil`, le conseil personnalisé rédigé par l’IA à la fin du questionnaire.
+
+## Pages
+
+| Adresse | Contenu |
+|---|---|
+| `/` | Accueil |
+| `/alyah` | Acheter ou louer pour son alyah, parcours, FAQ, questionnaire |
+| `/investissement` | Investissement locatif, simulateur de rendement, formulaire |
+| `/coup-de-fusil` | Achat‑rénovation‑revente, simulateur de plus‑value, avant/après, formulaire |
+| `/villes` et `/villes/<ville>` | Les 14 villes, une page par ville (ex. `/villes/netanya`) |
+| `/realisations` | Galerie filtrable : avant/après, ventes, témoignages, vidéos |
+| `/simulateur` | Simulateur complet. Accepte `?ville=haifa&mode=invest` |
+| `/trouver-ma-ville` | Le questionnaire. `?projet=alyah`, `investissement` ou `coup-de-fusil` ouvre directement le bon parcours |
+
+Le site génère aussi `sitemap-index.xml`, `robots.txt`, un titre, une meta description et des balises Open Graph pour chaque page.
+
+## Lancer le site sur votre ordinateur
+
+Il faut [Node.js](https://nodejs.org) version 22 ou plus récente.
+
+```bash
+npm install        # une seule fois
+npm run dev        # puis ouvrir http://localhost:4321
+```
+
+Les modifications apparaissent tout de suite dans le navigateur.
+
+Autres commandes :
+
+```bash
+npm run check      # vérifie le code (erreurs de frappe, types)
+npm run build      # fabrique la version en ligne dans le dossier dist/
+```
+
+Pour tester le conseil de l’IA en local, copiez `.env.example` en `.env` et renseignez `ANTHROPIC_API_KEY`. Sans clé, le bouton « Obtenir le conseil de l’IA » est simplement masqué ; le classement des villes fonctionne quand même.
+
+## Où changer quoi
+
+| Pour changer… | Fichier |
+|---|---|
+| **Nom de la société, numéro WhatsApp, e‑mail**, adresse du site, années d’expérience | `src/data/site.ts` (le seul endroit où ils figurent) |
+| Les villes : prix, loyers, notes, quartiers, hôpitaux, présentation | `src/data/cities.ts` |
+| Les villes mises en avant sur l’accueil | `HOME_CITIES` dans `src/data/cities.ts` |
+| Hypothèses du simulateur (taux, durée du prêt, coût des travaux…) | bas de `src/data/cities.ts` |
+| Réalisations, ventes, témoignages, vidéos | `src/data/gallery.ts` |
+| Opérations avant/après de la page Coup de fusil | `PROJECTS` dans `src/data/gallery.ts` |
+| Questions et réponses du questionnaire | `src/data/questionnaire.ts` |
+| Calcul de compatibilité des villes et prompt de l’IA | `src/lib/recommend.ts` |
+| Textes d’une page | `src/pages/<page>.astro` (ex. `src/pages/alyah.astro`) |
+| En‑tête, pied de page, bouton WhatsApp flottant | `src/components/Header.astro`, `Footer.astro`, `WhatsAppFloat.astro` |
+| Couleurs, polices, espacements | `src/styles/global.css` (variables en haut du fichier) |
+| Image de partage (WhatsApp, Facebook…) | `public/og.png` (1200 × 630 px) |
+| Icône de l’onglet | `public/favicon.svg` |
+
+### Nom et numéro définitifs
+
+Dans `src/data/site.ts` :
+
+1. remplacez `name`, `whatsapp` (chiffres seulement, avec l’indicatif : `9725…`), `email` et `url` ;
+2. passez `provisional` à `false` : les étiquettes « nom provisoire » et « numéro provisoire » disparaissent.
+
+Les initiales du logo sont tirées du nom automatiquement.
+
+### Villes
+
+Les prix moyens (`avg`) viennent du Bureau central des statistiques (fin 2025). Les prix au m², les loyers et les notes de 0 à 3 sont des **estimations à faire valider** par l’équipe (un commentaire le rappelle en haut de `cities.ts`). Les notes pilotent le classement du questionnaire : changer une note change les villes recommandées.
+
+Pour ajouter une ville, copiez un bloc dans `CITIES` et changez son `id` : la page `/villes/<id>` est créée automatiquement, et la ville apparaît dans le simulateur, le questionnaire et le pied de page.
+
+### Photos et vidéos des réalisations
+
+1. Déposez les fichiers dans `public/realisations/` (photos au format 4/3, idéalement 1600 × 1200 px et moins de 400 Ko ; vidéos en `.mp4`).
+2. Dans `src/data/gallery.ts`, ajoutez sur l’élément concerné :
+   - `before: "/realisations/netanya-avant.jpg"` et `after: "/realisations/netanya-apres.jpg"` pour un avant/après ;
+   - `photo: "/realisations/ir-yamim.jpg"` pour une vente (ou l’affiche d’une vidéo) ;
+   - `videoUrl: "/realisations/famille-l.mp4"` pour un témoignage vidéo.
+3. Retirez `demo: true` quand le contenu est réel : l’étiquette « exemple » disparaît.
+
+Tant qu’aucune image n’est fournie, une illustration dessinée provisoire s’affiche. Une réalisation apparaît aussi sur la page de sa ville quand son champ `city` (ou `from` pour un témoignage) contient le nom de la ville.
+
+La photo de l’accueil se change avec `heroPhoto` dans `src/data/site.ts`.
+
+## Conseil rédigé par l’IA
+
+À la fin du questionnaire alyah, le bouton « Obtenir le conseil de l’IA » appelle `/api/conseil` (fichier `src/pages/api/conseil.ts`), qui interroge l’API Claude avec le même prompt que la maquette et affiche le texte au fur et à mesure.
+
+- **Clé** : variable d’environnement `ANTHROPIC_API_KEY` (clé à créer sur [console.anthropic.com](https://console.anthropic.com)). Ne la mettez jamais dans le code.
+- **Modèle** : `claude-opus-5`, avec un effort « low » (réponse courte et rapide). Si une demande est refusée par les filtres de sécurité, l’API la relance automatiquement sur un autre modèle.
+- **Anti‑abus** : le prompt est construit sur le serveur à partir des réponses du questionnaire, vérifiées une par une. Personne ne peut envoyer un texte libre à l’IA. Chaque adresse IP est limitée à 4 demandes par 10 minutes et 12 par jour, avec un plafond de 300 demandes par jour. Seules les pages du site peuvent appeler la route. Ces réglages sont en haut de `conseil.ts`.
+- Les compteurs sont gardés en mémoire par le serveur : c’est une protection de base, suffisante pour un site vitrine. Pour une limite stricte, ajoutez un compteur partagé (par exemple Upstash Redis) et fixez aussi un plafond de dépenses mensuel dans la console Anthropic.
+
+## Mettre le site en ligne
+
+Le projet se déploie tel quel sur Netlify ou sur Vercel : l’adaptateur est choisi automatiquement (Vercel quand le site est construit sur Vercel, Netlify sinon).
+
+Dans les deux cas, commencez par envoyer le projet sur GitHub (ou GitLab / Bitbucket).
+
+### Netlify
+
+1. Sur [app.netlify.com](https://app.netlify.com), **Add new site › Import an existing project**, puis choisissez le dépôt.
+2. Les réglages sont détectés : commande `npm run build`, dossier `dist`.
+3. **Site configuration › Environment variables** : ajoutez `ANTHROPIC_API_KEY` et `SITE_URL` (ex. `https://www.votre-domaine.com`).
+4. Déployez. Chaque nouveau commit met le site à jour automatiquement.
+
+### Vercel
+
+1. Sur [vercel.com/new](https://vercel.com/new), importez le dépôt. Le framework Astro est détecté.
+2. **Settings › Environment Variables** : ajoutez `ANTHROPIC_API_KEY` et `SITE_URL`.
+3. Déployez.
+
+### Nom de domaine
+
+1. Dans Netlify (**Domain management › Add a domain**) ou Vercel (**Settings › Domains**), ajoutez votre domaine, par exemple `www.votre-domaine.com`.
+2. Chez le registraire du domaine (OVH, Gandi, GoDaddy…), créez les enregistrements DNS indiqués par Netlify ou Vercel (en général un `CNAME` pour `www` et un enregistrement `A` ou `ALIAS` pour le domaine nu).
+3. Le certificat HTTPS est créé automatiquement, en quelques minutes à quelques heures.
+4. Mettez la même adresse dans `url` de `src/data/site.ts` (ou dans la variable `SITE_URL`) : elle sert au sitemap, aux balises Open Graph et aux adresses canoniques.
+5. Déclarez le site dans [Google Search Console](https://search.google.com/search-console) et envoyez‑y l’adresse `https://www.votre-domaine.com/sitemap-index.xml`.
+
+## Organisation du projet
+
+```
+src/
+  data/         site.ts, cities.ts, gallery.ts, questionnaire.ts : tout le contenu modifiable
+  lib/          calculs (recommend.ts), mise en forme des nombres, illustrations dessinées
+  components/   Header, Footer, WhatsAppFloat, Simulator, Questionnaire, Gallery,
+                GalleryCard, CityCard, BeforeAfter, Steps, Crumbs…
+  layouts/      Base.astro : balises <head>, SEO, en‑tête et pied de page communs
+  pages/        une page = une adresse ; pages/api/conseil.ts = route de l’IA
+  styles/       global.css
+public/         fichiers servis tels quels : og.png, favicon.svg, realisations/
+```

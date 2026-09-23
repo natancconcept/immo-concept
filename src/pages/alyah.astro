@@ -1,0 +1,60 @@
+---
+import Base from "../layouts/Base.astro";
+import Crumbs from "../components/Crumbs.astro";
+import Steps from "../components/Steps.astro";
+import FormSection from "../components/FormSection.astro";
+import { questionnaireLink } from "../data/questionnaire";
+
+const FAQ = [
+  ["Peut‑on acheter avant d’avoir fait son alyah ?", "Oui, un non‑résident peut acheter en Israël. Le financement bancaire est en général plus limité pour un non‑résident : on regarde ensemble ce qui est le plus avantageux dans votre cas."],
+  ["Quels frais prévoir en plus du prix ?", "Les honoraires d’avocat, la taxe d’achat (Mas Rechisha) selon votre situation, et les éventuels frais d’agence. Les olim bénéficient d’un barème spécifique sous conditions : notre avocat fait le calcul pour vous."],
+  ["Faut‑il parler hébreu ?", "Non. Nous vous accompagnons en français à chaque étape, y compris chez l’avocat et à la banque."],
+  ["Louer d’abord ou acheter directement ?", "Beaucoup d’olim louent un an pour découvrir la ville avant d’acheter. Nous vous accompagnons pour les deux, avec la même équipe."],
+];
+const faqLd = { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: FAQ.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) };
+---
+<Base title="Alyah : acheter ou louer votre logement en Israël" description="Acheter ou louer votre logement pour votre alyah : recherche ciblée, visites en vidéo, avocat francophone, financement et remise des clés, en français.">
+  <script slot="head" type="application/ld+json" set:html={JSON.stringify(faqLd)} />
+  <section class="page-hero">
+    <div class="wrap">
+      <Crumbs items={[{ label: "Alyah" }]} />
+      <span class="he big-he" lang="he">עלייה</span>
+      <h1>Acheter ou louer votre logement pour votre alyah</h1>
+      <p class="lead">Que vous soyez encore en France ou déjà arrivé, on trouve avec vous la bonne ville, le bon quartier et le bon logement, et on s’occupe du juridique jusqu’à la remise des clés.</p>
+      <div class="cta"><a class="btn btn-primary btn-lg" href={questionnaireLink("olim")}>Trouver ma ville</a><a class="btn btn-ghost btn-lg" href="/simulateur?mode=achat">Simuler un achat</a></div>
+    </div>
+  </section>
+  <section>
+    <div class="wrap">
+      <div class="sec-head"><span class="eyebrow">Ce que nous faisons pour vous</span><h2>Tout le parcours, en français.</h2></div>
+      <div class="features">
+        <div><h3>Recherche ciblée</h3><p>Selon votre ville, votre budget, votre pratique et l’école des enfants.</p></div>
+        <div><h3>Visites à distance</h3><p>Visites en vidéo et rapport détaillé si vous êtes encore à l’étranger.</p></div>
+        <div><h3>Avocat intégré</h3><p>Vérification du bien au cadastre (Tabou), contrat, taxes, signature.</p></div>
+        <div><h3>Financement</h3><p>Aide pour le prêt immobilier et les démarches bancaires d’olim.</p></div>
+      </div>
+    </div>
+  </section>
+  <section class="flip">
+    <div class="wrap">
+      <div class="sec-head"><span class="eyebrow">Votre parcours</span><h2>De la première question à la remise des clés.</h2></div>
+      <Steps items={[
+        { title: "Questionnaire", text: "Vous répondez en ligne, un conseiller vous appelle.", who: "Conseiller" },
+        { title: "Sélection", text: "Des biens choisis pour vous, dans les villes qui vous correspondent.", who: "Agent" },
+        { title: "Visites", text: "Sur place ou en vidéo, avec notre avis honnête.", who: "Agent" },
+        { title: "Vérifications", text: "Contrôle juridique complet du bien avant toute offre.", who: "Avocat" },
+        { title: "Financement", text: "Montage du prêt et accompagnement à la banque.", who: "Conseiller" },
+        { title: "Les clés", text: "Signature, enregistrement et remise des clés.", who: "Avocat" },
+      ]} />
+    </div>
+  </section>
+  <section>
+    <div class="wrap narrow">
+      <div class="sec-head"><span class="eyebrow">Questions fréquentes</span><h2>Ce que les olim nous demandent.</h2></div>
+      <div class="faq">
+        {FAQ.map(([q, a]) => <details><summary>{q}</summary><p>{a}</p></details>)}
+      </div>
+    </div>
+  </section>
+  <FormSection eyebrow="Trouver ma ville" title="Commencez par le questionnaire." lead="Quelques minutes pour découvrir les villes qui vous correspondent, puis un conseiller vous recontacte sur WhatsApp." goal="olim" />
+</Base>

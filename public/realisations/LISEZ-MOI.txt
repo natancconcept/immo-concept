@@ -1,0 +1,4 @@
+Déposez ici les photos et vidéos des réalisations (jpg, webp, mp4).
+Puis indiquez leur adresse dans src/data/gallery.ts, par exemple :
+  before: "/realisations/netanya-avant.jpg", after: "/realisations/netanya-apres.jpg"
+Conseil : photos en 1600 × 1200 (format 4/3), moins de 400 Ko chacune.

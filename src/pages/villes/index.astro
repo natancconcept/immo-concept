@@ -1,0 +1,25 @@
+---
+import Base from "../../layouts/Base.astro";
+import Crumbs from "../../components/Crumbs.astro";
+import CityCard from "../../components/CityCard.astro";
+import { CITIES, REGIONS } from "../../data/cities";
+import { questionnaireLink } from "../../data/questionnaire";
+---
+<Base title="Nos villes en Israël" description="Jérusalem, Tel Aviv, Netanya, Ashdod, Haïfa, Ra’anana et plus : prix, loyers, vie sur place et quartiers recherchés dans les villes où nous accompagnons les francophones.">
+  <section class="page-hero">
+    <div class="wrap">
+      <Crumbs items={[{ label: "Villes" }]} />
+      <h1>Nos villes en Israël</h1>
+      <p class="lead">Nous travaillons dans tout le pays, avec une priorité pour les grandes villes. Chaque fiche donne les prix, la vie sur place et les quartiers les plus demandés.</p>
+      <div class="cta"><a class="btn btn-primary btn-lg" href={questionnaireLink("olim")}>Laquelle est faite pour moi ?</a></div>
+    </div>
+  </section>
+  <section>
+    <div class="wrap">
+      {REGIONS.map((r) => <>
+        <h2 class="region-h">{r}</h2>
+        <div class="city-grid">{CITIES.filter((c) => c.region === r).map((c) => <CityCard city={c} />)}</div>
+      </>)}
+    </div>
+  </section>
+</Base>

@@ -1,0 +1,27 @@
+---
+/* Une photo si elle est fournie, sinon l'illustration dessinée provisoire. */
+import type { RoomKind } from "../data/gallery";
+interface Props {
+  photo?: string; kind: RoomKind; seed: number; after?: boolean;
+  alt: string; class?: string; width?: number; height?: number; eager?: boolean;
+}
+const { photo, kind, seed, after = true, alt, class: cls, width = 800, height = 600, eager = false } = Astro.props;
+---
+{photo
+  ? <img src={photo} alt={alt} class={cls} width={width} height={height} loading={eager ? "eager" : "lazy"} decoding="async" />
+  : <canvas data-room data-kind={kind} data-seed={seed} data-after={after ? "1" : "0"} width={width} height={height} class={cls} role="img" aria-label={alt}></canvas>}
+
+<script>
+  import { drawRoom } from "../lib/draw";
+  import type { RoomKind } from "../data/gallery";
+  // Dessine chaque illustration quand elle approche de l'écran.
+  const draw = (cv: HTMLCanvasElement) => {
+    if (cv.dataset.drawn) return;
+    drawRoom(cv, cv.dataset.after === "1", cv.dataset.kind as RoomKind, +cv.dataset.seed!);
+    cv.dataset.drawn = "1";
+  };
+  const io = "IntersectionObserver" in window
+    ? new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { draw(e.target as HTMLCanvasElement); io!.unobserve(e.target) } }), { rootMargin: "400px" })
+    : null;
+  document.querySelectorAll<HTMLCanvasElement>("canvas[data-room]").forEach((cv) => (io ? io.observe(cv) : draw(cv)));
+</script>

@@ -1,0 +1,59 @@
+---
+import type { GalleryItem } from "../data/gallery";
+import BeforeAfter from "./BeforeAfter.astro";
+import RoomMedia from "./RoomMedia.astro";
+interface Props { item: GalleryItem; hidden?: boolean }
+const { item, hidden } = Astro.props;
+const initials = (name: string) => name.replace(/[^A-Za-zÀ-ÿ ]/g, "").split(" ").filter((w) => w && w !== "et").map((s) => s[0]).slice(0, 2).join("");
+const video = item.type === "testi" && !!item.video;
+---
+<article class="gcard" data-type={item.type} data-video={video ? "1" : undefined} hidden={hidden}>
+  {item.type === "ba" && <>
+    <BeforeAfter before={item.before} after={item.after} kind={item.kind} seed={item.seed} label={item.title} />
+    <div class="body">
+      <span class="type">Avant / Après {item.demo && <span class="ph">exemple</span>}</span>
+      <h3>{item.title}</h3>
+      <span class="meta">{item.city} · {item.months} mois de travaux</span>
+      <div class="nums"><div><small>Travaux</small><b>{item.works}</b></div><div><small>Durée</small><b>{item.months} mois</b></div><div><small>Résultat</small><b>{item.gain}</b></div></div>
+    </div>
+  </>}
+  {item.type === "sale" && <>
+    <div class="media"><RoomMedia photo={item.photo} kind={item.kind} seed={item.seed} alt={`${item.title}, ${item.city}`} /><span class="sold">Vendu</span></div>
+    <div class="body">
+      <span class="type">Vente réalisée {item.demo && <span class="ph">exemple</span>}</span>
+      <h3>{item.title}</h3>
+      <span class="meta">{item.city} · {item.profile}</span>
+      <div class="nums"><div><small>Prix de vente</small><b>{item.price}</b></div><div><small>Vendu en</small><b>{item.days} jours</b></div><div><small>Avocat</small><b>Inclus</b></div></div>
+    </div>
+  </>}
+  {item.type === "testi" && <>
+    {item.video && (
+      <div class="media">
+        {item.videoUrl
+          ? <video src={item.videoUrl} controls preload="metadata" poster={item.photo} playsinline></video>
+          : <>
+              <RoomMedia photo={item.photo} kind={item.kind} seed={item.seed} alt="" />
+              {item.dur && <span class="dur">{item.dur}</span>}
+              <button type="button" class="play" aria-label={`Lire la vidéo de ${item.name}`}></button>
+            </>}
+      </div>
+    )}
+    <div class="body">
+      <span class="type">{item.video ? "Témoignage vidéo" : "Témoignage"} {item.demo && <span class="ph">exemple</span>}</span>
+      <span class="stars" role="img" aria-label="5 étoiles sur 5">★★★★★</span>
+      <blockquote class="quote">{item.text}</blockquote>
+      <div class="who-row"><span class="avatar" aria-hidden="true">{initials(item.name)}</span><div><b>{item.name}</b><span>{item.from} · {item.project}</span></div></div>
+    </div>
+  </>}
+</article>
+
+<script>
+  // Vidéo pas encore fournie : on l'explique au clic.
+  document.querySelectorAll<HTMLButtonElement>(".gcard .play").forEach((b) => b.addEventListener("click", () => {
+    const m = b.closest(".media")!;
+    if (m.querySelector(".vid-note")) return;
+    const n = document.createElement("div");
+    n.className = "vid-note"; n.textContent = "Vidéo d’exemple : la vraie vidéo du client sera ajoutée ici.";
+    m.append(n);
+  }));
+</script>

@@ -1,0 +1,13 @@
+---
+import Base from "../layouts/Base.astro";
+import { questionnaireLink } from "../data/questionnaire";
+---
+<Base title="Page introuvable" description="Cette page n’existe pas ou a été déplacée.">
+  <section class="page-hero">
+    <div class="wrap">
+      <h1>Cette page est introuvable.</h1>
+      <p class="lead">Elle a peut‑être été déplacée. Reprenez depuis l’accueil ou trouvez directement votre ville.</p>
+      <div class="cta"><a class="btn btn-primary btn-lg" href="/">Retour à l’accueil</a><a class="btn btn-ghost btn-lg" href={questionnaireLink("olim")}>Trouver ma ville</a></div>
+    </div>
+  </section>
+</Base>

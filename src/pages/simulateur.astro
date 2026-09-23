@@ -1,0 +1,17 @@
+---
+import Base from "../layouts/Base.astro";
+import Crumbs from "../components/Crumbs.astro";
+import Simulator from "../components/Simulator.astro";
+---
+<Base title="Simulateur de budget immobilier par ville" description="Acheter, louer, investir ou rénover pour revendre : estimez prix, mensualités, loyers, rendement et plus‑value dans 14 villes d’Israël.">
+  <section class="page-hero">
+    <div class="wrap">
+      <Crumbs items={[{ label: "Simulateur" }]} />
+      <h1>Combien pour votre projet, ville par ville ?</h1>
+      <p class="lead">Choisissez une ville et un type de projet pour obtenir un ordre de grandeur. Nous affinons ensuite avec vous, bien par bien.</p>
+    </div>
+  </section>
+  <section>
+    <div class="wrap"><Simulator /></div>
+  </section>
+</Base>

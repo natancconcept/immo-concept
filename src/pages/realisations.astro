@@ -1,0 +1,21 @@
+---
+import Base from "../layouts/Base.astro";
+import Crumbs from "../components/Crumbs.astro";
+import Gallery from "../components/Gallery.astro";
+import { GALLERY } from "../data/gallery";
+const hasDemo = GALLERY.some((g) => g.demo);
+---
+<Base title="Réalisations et témoignages" description="Chantiers avant/après, biens vendus et témoignages de nos clients francophones en Israël, en photo et en vidéo.">
+  <section class="page-hero">
+    <div class="wrap">
+      <Crumbs items={[{ label: "Réalisations" }]} />
+      <h1>Réalisations et témoignages</h1>
+      <p class="lead">Chantiers avant/après, biens vendus et témoignages de nos clients, en photo et en vidéo.{hasDemo && <> <span class="ph">Contenu d’exemple</span> Les cartes marquées « exemple » montrent la mise en page : elles seront remplacées par vos vraies photos, vidéos et avis clients.</>}</p>
+    </div>
+  </section>
+  <section>
+    <div class="wrap">
+      <Gallery items={GALLERY} filters />
+    </div>
+  </section>
+</Base>

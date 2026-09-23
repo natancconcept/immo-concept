@@ -1,0 +1,12 @@
+---
+import type { City } from "../data/cities";
+import { fmt, shekK } from "../lib/format";
+interface Props { city: City }
+const { city: c } = Astro.props;
+const tags = [c.franco >= 2 ? "Francophones" : "", c.sea === 3 ? "Bord de mer" : "", c.house >= 3 ? "Maisons" : "", c.dati === 3 ? "Vie religieuse" : ""].filter(Boolean).slice(0, 2);
+---
+<a class="city-card" href={`/villes/${c.id}`}>
+  <span class="cc-region">{c.region}</span><b>{c.name}</b>
+  <span class="cc-price">{c.avg ? <>{shekK(c.avg)} <small>prix moyen</small></> : <>≈ {fmt(c.m2)} ₪/m² <small>estimation</small></>}</span>
+  <span class="cc-tags">{tags.map((t) => <i>{t}</i>)}</span>
+</a>

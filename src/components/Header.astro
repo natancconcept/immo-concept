@@ -1,0 +1,28 @@
+---
+import { SITE, logoMark, waLink } from "../data/site";
+import { questionnaireLink } from "../data/questionnaire";
+
+const NAV = [
+  { href: "/alyah", key: "alyah", label: "Alyah" },
+  { href: "/investissement", key: "investissement", label: "Investissement" },
+  { href: "/coup-de-fusil", key: "coup-de-fusil", label: "Coup de fusil" },
+  { href: "/villes", key: "villes", label: "Villes" },
+  { href: "/realisations", key: "realisations", label: "Réalisations" },
+];
+const section = Astro.url.pathname.split("/")[1] || "";
+const current = (key: string) => (section === key ? "page" : undefined);
+---
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="/"><span class="logo-mark" aria-hidden="true">{logoMark}</span><span class="logo-text">{SITE.name}</span></a>
+    <nav class="main" aria-label="Navigation principale">
+      {NAV.map((n) => <a href={n.href} data-nav={n.key} aria-current={current(n.key)}>{n.label}</a>)}
+    </nav>
+    <a class="btn btn-find" href={questionnaireLink("olim")}><svg aria-hidden="true"><use href="#pin" /></svg><span>Trouver ma ville</span></a>
+    <a class="btn btn-wa" href={waLink()} target="_blank" rel="noopener" aria-label="WhatsApp"><svg aria-hidden="true"><use href="#wa" /></svg><span>WhatsApp</span></a>
+  </div>
+  <nav class="mnav" aria-label="Navigation mobile">
+    {NAV.map((n) => <a href={n.href} aria-current={current(n.key)}>{n.label}</a>)}
+    <a href="/simulateur" aria-current={current("simulateur")}>Simulateur</a>
+  </nav>
+</header>

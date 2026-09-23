@@ -1,0 +1,117 @@
+---
+/* Simulateur de budget par ville (acheter, louer, investir, coup de fusil).
+   Un seul simulateur par page. Sur /simulateur, l'adresse peut préciser ?ville=netanya&mode=achat */
+import { CITIES, REGIONS } from "../data/cities";
+export type SimMode = "achat" | "location" | "invest" | "flip";
+interface Props { mode?: SimMode; city?: string }
+const { mode = "achat", city = "netanya" } = Astro.props;
+const MODES: [SimMode, string][] = [["achat", "Acheter"], ["location", "Louer"], ["invest", "Investir"], ["flip", "Coup de fusil"]];
+---
+<div class="sim" id="simBlock" data-mode={mode} data-city={city}>
+  <div class="card">
+    <div class="field">
+      <span class="lbl" id="simModeLbl">Type de projet</span>
+      <div class="seg" id="simMode" role="group" aria-labelledby="simModeLbl">
+        {MODES.map(([m, l]) => <button type="button" data-mode={m} aria-pressed={m === mode ? "true" : "false"}>{l}</button>)}
+      </div>
+    </div>
+    <div class="field">
+      <label for="simCity">Ville</label>
+      <select id="simCity">
+        {REGIONS.map((r) => <optgroup label={r}>{CITIES.filter((c) => c.region === r).map((c) => <option value={c.id} selected={c.id === city}>{c.name}</option>)}</optgroup>)}
+      </select>
+    </div>
+    <div class="field">
+      <div class="range-row"><label for="simSize">Surface</label><output id="simSizeOut" for="simSize">100 m²</output></div>
+      <input type="range" id="simSize" min="40" max="220" step="5" value="100">
+    </div>
+    <div class="field" id="apportField">
+      <div class="range-row"><label for="simApport">Apport</label><output id="simApportOut" for="simApport">30 %</output></div>
+      <input type="range" id="simApport" min="25" max="100" step="5" value="30">
+    </div>
+  </div>
+  <div class="card results" aria-live="polite">
+    <div class="big" id="simBig"></div>
+    <div class="bars" id="simBars"></div>
+    <p class="note" id="simNote"></p>
+    <div class="cities" id="cityChips">
+      <span class="region">Comparer rapidement</span>
+      {CITIES.map((c) => <button type="button" data-city={c.id} aria-pressed={c.id === city ? "true" : "false"} class={c.id === city ? "on" : undefined}>{c.name}</button>)}
+    </div>
+  </div>
+</div>
+
+<script>
+  import { CITIES, RENO_M2, FLIP_DISCOUNT, FLIP_PREMIUM, FEES, RATE, YEARS } from "../data/cities";
+  import { fmt, shek, shekK } from "../lib/format";
+
+  const root = document.getElementById("simBlock");
+  if (root) {
+    const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+    const params = new URLSearchParams(location.search);
+    const modes = ["achat", "location", "invest", "flip"];
+    const sim = {
+      mode: modes.includes(params.get("mode") || "") ? params.get("mode")! : root.dataset.mode!,
+      city: CITIES.some((c) => c.id === params.get("ville")) ? params.get("ville")! : root.dataset.city!,
+    };
+    const citySel = $<HTMLSelectElement>("simCity"), sizeIn = $<HTMLInputElement>("simSize"), apportIn = $<HTMLInputElement>("simApport");
+    const rate = String(RATE * 100).replace(".", ",");
+
+    const monthly = (principal: number) => { const r = RATE / 12, n = YEARS * 12; return principal * r / (1 - Math.pow(1 + r, -n)) };
+    const bar = (label: string, val: number, max: number, cls = "") => {
+      const w = Math.max(2, Math.min(100, Math.abs(val) / max * 100));
+      return `<div class="bar"><span>${label}</span><div class="track"><div class="fill ${cls}" style="width:${w}%"></div></div><span>${shekK(val)}</span></div>`;
+    };
+
+    function renderSim() {
+      const c = CITIES.find((x) => x.id === sim.city)!, s = +sizeIn.value, ap = +apportIn.value / 100;
+      $("simSizeOut").textContent = s + " m²";
+      $("simApportOut").textContent = Math.round(ap * 100) + " %";
+      $("apportField").hidden = sim.mode === "location" || sim.mode === "flip";
+      const big = $("simBig"), bars = $("simBars"), note = $("simNote");
+      const price = c.m2 * s, rent = c.rent * s;
+      if (sim.mode === "achat") {
+        const loan = price * (1 - ap);
+        big.innerHTML = `<div><small>Prix estimé</small><b>${shekK(price)}</b><em>${fmt(c.m2)} ₪ / m²</em></div>
+          <div><small>Apport</small><b>${shekK(price * ap)}</b><em>${Math.round(ap * 100)} % du prix</em></div>
+          <div><small>Mensualité</small><b>${shek(monthly(loan))}</b><em>sur ${YEARS} ans</em></div>`;
+        bars.innerHTML = bar("Apport", price * ap, price) + bar("Prêt", loan, price, "soft");
+        note.textContent = (c.avg ? `Prix moyen d’un appartement vendu à ${c.name} : ${shekK(c.avg)} (Bureau central des statistiques, fin 2025). ` : "") + `Prix au m² estimé à partir de cette moyenne. Hypothèse de prêt : taux ${rate} % sur ${YEARS} ans. Les banques israéliennes prêtent en général jusqu’à 75 % pour une résidence principale, moins pour un non‑résident. La taxe d’achat (Mas Rechisha) bénéficie d’un barème spécifique pour les olim sous conditions : notre avocat la calcule pour votre cas.`;
+      } else if (sim.mode === "location") {
+        big.innerHTML = `<div><small>Loyer estimé</small><b>${shek(rent)}</b><em>par mois</em></div>
+          <div><small>Prix au m²</small><b>${fmt(c.rent)} ₪</b><em>par mois</em></div>
+          <div><small>Budget annuel</small><b>${shekK(rent * 12)}</b><em>hors charges</em></div>`;
+        bars.innerHTML = bar("Loyer mensuel", rent, rent * 1.4) + bar("Arnona + Vaad (estim.)", s * 9, rent * 1.4, "soft");
+        note.textContent = "Loyer hors arnona (taxe municipale) et vaad bayit (charges d’immeuble), qui varient selon la ville et l’immeuble. Ordres de grandeur indicatifs.";
+      } else if (sim.mode === "invest") {
+        const y = rent * 12 / price, loan = price * (1 - ap), m = monthly(loan);
+        big.innerHTML = `<div><small>Prix estimé</small><b>${shekK(price)}</b><em>${fmt(c.m2)} ₪ / m²</em></div>
+          <div><small>Loyer attendu</small><b>${shek(rent)}</b><em>par mois</em></div>
+          <div><small>Rendement brut</small><b>${(y * 100).toFixed(1).replace(".", ",")} %</b><em>par an</em></div>`;
+        bars.innerHTML = bar("Loyer mensuel", rent, Math.max(rent, m)) + bar("Mensualité prêt", m, Math.max(rent, m), "soft") + bar("Écart / mois", rent - m, Math.max(rent, m), rent - m >= 0 ? "gain" : "soft");
+        note.textContent = (c.avg ? `Prix moyen d’un appartement vendu à ${c.name} : ${shekK(c.avg)} (CBS, fin 2025). ` : "") + `Loyers estimés. Rendement brut = loyers annuels ÷ prix, avant charges et impôts. Le Sud et le Nord offrent en général un meilleur rendement, le Centre une meilleure valorisation. Hypothèse de prêt : ${rate} % sur ${YEARS} ans.`;
+      } else {
+        const buy = price * (1 - FLIP_DISCOUNT), works = RENO_M2 * s, sale = price * (1 + FLIP_PREMIUM), fees = (buy + sale) * FEES / 2;
+        const gain = sale - buy - works - fees;
+        big.innerHTML = `<div><small>Achat du bien à rénover</small><b>${shekK(buy)}</b><em>−${Math.round(FLIP_DISCOUNT * 100)} % vs marché</em></div>
+          <div><small>Revente après travaux</small><b>${shekK(sale)}</b><em>environ 6 à 9 mois</em></div>
+          <div><small>Plus‑value brute</small><b style="color:var(--wa)">${shekK(gain)}</b><em>${(gain / (buy + works + fees) * 100).toFixed(0)} % du capital engagé</em></div>`;
+        bars.innerHTML = bar("Achat", buy, sale) + bar("Architecte + travaux", works, sale, "soft") + bar("Frais (avocat, taxes…)", fees, sale, "soft") + bar("Plus‑value", gain, sale, "gain");
+        note.textContent = `Hypothèses de démonstration : travaux complets ${fmt(RENO_M2)} ₪/m², décote d’achat ${Math.round(FLIP_DISCOUNT * 100)} %, prime de revente ${Math.round(FLIP_PREMIUM * 100)} %, frais ${Math.round(FEES * 100)} %. Chaque opération fait l’objet d’une étude chiffrée avant l’achat.`;
+      }
+      citySel.value = sim.city;
+      root!.querySelectorAll<HTMLButtonElement>("#simMode button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === sim.mode)));
+      root!.querySelectorAll<HTMLButtonElement>("#cityChips button").forEach((b) => {
+        const on = b.dataset.city === sim.city;
+        b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on));
+      });
+    }
+
+    root.querySelectorAll<HTMLButtonElement>("#simMode button").forEach((b) => b.addEventListener("click", () => { sim.mode = b.dataset.mode!; renderSim() }));
+    root.querySelectorAll<HTMLButtonElement>("#cityChips button").forEach((b) => b.addEventListener("click", () => { sim.city = b.dataset.city!; renderSim() }));
+    citySel.addEventListener("change", () => { sim.city = citySel.value; renderSim() });
+    sizeIn.addEventListener("input", renderSim);
+    apportIn.addEventListener("input", renderSim);
+    renderSim();
+  }
+</script>
