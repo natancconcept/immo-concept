@@ -1,0 +1,19 @@
+---
+/* Bandeau photo en haut des pages intérieures. */
+import Photo from "./Photo.astro";
+import Crumbs from "./Crumbs.astro";
+interface Props { photo: string; photoAlt: string; eyebrow?: string; he?: string; title: string; lead?: string; crumbs: { label: string; href?: string }[] }
+const { photo, photoAlt, eyebrow, he, title, lead, crumbs } = Astro.props;
+---
+<section class="phero">
+  <Photo src={photo} alt={photoAlt} class="phero-img" sizes="100vw" widths={[640, 1024, 1600]} eager />
+  <div class="phero-shade"></div>
+  <div class="wrap phero-in">
+    <Crumbs items={crumbs} />
+    {he && <span class="he phero-he" lang="he">{he}</span>}
+    {eyebrow && <span class="eyebrow on-photo">{eyebrow}</span>}
+    <h1>{title}</h1>
+    {lead && <p class="phero-lead">{lead}</p>}
+    <div class="cta"><slot /></div>
+  </div>
+</section>

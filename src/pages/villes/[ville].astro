@@ -1,10 +1,11 @@
 ---
 import Base from "../../layouts/Base.astro";
-import Crumbs from "../../components/Crumbs.astro";
+import PageHero from "../../components/PageHero.astro";
+import CtaBand from "../../components/CtaBand.astro";
 import CityCard from "../../components/CityCard.astro";
 import Gallery from "../../components/Gallery.astro";
 import { CITIES, PROFILE, type City } from "../../data/cities";
-import { GALLERY } from "../../data/gallery";
+import { PUBLIC_GALLERY } from "../../data/gallery";
 import { questionnaireLink } from "../../data/questionnaire";
 import { fmt, shekK } from "../../lib/format";
 
@@ -13,25 +14,24 @@ export function getStaticPaths() {
 }
 const { city: c } = Astro.props as { city: City };
 const rent4 = c.rent * 100, y = (c.rent * 12 / c.m2 * 100).toFixed(1).replace(".", ",");
-const mine = GALLERY.filter((g) => ("city" in g ? g.city : g.from).includes(c.name));
+const mine = PUBLIC_GALLERY.filter((g) => ("city" in g ? g.city : g.from).includes(c.name));
 const others = CITIES.filter((x) => x.id !== c.id && x.region === c.region).concat(CITIES.filter((x) => x.region !== c.region)).slice(0, 4);
 const desc = `Acheter ou louer à ${c.name} : ${c.avg ? `prix moyen ${shekK(c.avg)}` : `≈ ${fmt(c.m2)} ₪/m²`}, loyers, quartiers (${c.hood}), hôpitaux et vie sur place. Accompagnement en français.`;
 ---
 <Base title={`Immobilier à ${c.name}`} description={desc}>
-  <section class="page-hero"><div class="wrap">
-    <Crumbs items={[{ label: "Villes", href: "/villes" }, { label: c.name }]} />
-    <span class="eyebrow">{c.region}</span>
-    <h1>Acheter ou louer à {c.name}</h1>
-    <p class="lead">{c.blurb}</p>
-    <div class="cta"><a class="btn btn-primary btn-lg" href={questionnaireLink("olim")}>Est‑ce ma ville ?</a><a class="btn btn-ghost btn-lg" href={`/simulateur?ville=${c.id}&mode=achat`}>Simuler un achat à {c.name}</a></div>
-  </div></section>
-  <section><div class="wrap">
+  <PageHero photo={c.photo} photoAlt={c.photoAlt} eyebrow={c.region} crumbs={[{ label: "Villes", href: "/villes" }, { label: c.name }]}
+    title={`Acheter ou louer à ${c.name}`} lead={c.blurb}>
+    <a class="btn btn-primary btn-lg" href={questionnaireLink("olim")}>Est‑ce ma ville ?</a>
+    <a class="btn btn-ghost btn-lg" href={`/simulateur?ville=${c.id}&mode=achat`}>Simuler un achat à {c.name}</a>
+  </PageHero>
+  <section class="city-figs-sec"><div class="wrap">
     <div class="city-figs">
       <div><small>Prix moyen d’un appartement</small><b>{c.avg ? shekK(c.avg) : "—"}</b><em>{c.avg ? "CBS, fin 2025" : "non publié dans ce classement"}</em></div>
       <div><small>Prix au m²</small><b>≈ {fmt(c.m2)} ₪</b><em>estimation</em></div>
       <div><small>Loyer d’un 4 pièces</small><b>≈ {fmt(rent4)} ₪</b><em>par mois, estimation</em></div>
       <div><small>Rendement brut</small><b>≈ {y} %</b><em>par an, estimation</em></div>
     </div>
+    {c.photoRegion && <p class="photo-note">Photo d’ambiance de la région.</p>}
   </div></section>
   <section class="flip"><div class="wrap city-cols">
     <div class="card"><h2 class="h3" style="font-size:21px;margin-bottom:8px">La vie à {c.name}</h2>
@@ -40,12 +40,13 @@ const desc = `Acheter ou louer à ${c.name} : ${c.avg ? `prix moyen ${shekK(c.av
     </div>
     <div class="card"><h3>Quartiers souvent recherchés</h3><p>{c.hood}</p><h3 style="margin-top:20px">Santé</h3><p>{c.hospName}</p><h3 style="margin-top:20px">Notre accompagnement</h3><p>Recherche, visites, avocat, financement et travaux : la même équipe francophone qu’ailleurs en Israël.</p></div>
   </div></section>
-  <section><div class="wrap">
+  {mine.length > 0 && <section><div class="wrap">
     <div class="sec-head"><span class="eyebrow">Réalisations</span><h2>Nos projets à {c.name}</h2></div>
-    {mine.length ? <Gallery items={mine} /> : <p class="lead">Les réalisations à {c.name} seront ajoutées ici. <a href="/realisations">Voir toutes nos réalisations</a></p>}
-  </div></section>
+    <Gallery items={mine} />
+  </div></section>}
   <section class="flip"><div class="wrap">
     <div class="sec-head"><span class="eyebrow">À comparer</span><h2>D’autres villes</h2></div>
     <div class="city-grid">{others.map((o) => <CityCard city={o} />)}</div>
   </div></section>
+  <CtaBand title={`Un projet à ${c.name} ?`} />
 </Base>

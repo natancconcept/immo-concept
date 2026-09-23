@@ -1,6 +1,7 @@
 ---
 import { SITE, logoMark, waLink } from "../data/site";
 import { questionnaireLink } from "../data/questionnaire";
+import { PUBLIC_GALLERY } from "../data/gallery";
 
 const NAV = [
   { href: "/alyah", key: "alyah", label: "Alyah" },
@@ -8,7 +9,7 @@ const NAV = [
   { href: "/coup-de-fusil", key: "coup-de-fusil", label: "Coup de fusil" },
   { href: "/villes", key: "villes", label: "Villes" },
   { href: "/realisations", key: "realisations", label: "Réalisations" },
-];
+].filter((n) => n.key !== "realisations" || PUBLIC_GALLERY.length > 0);
 const section = Astro.url.pathname.split("/")[1] || "";
 const current = (key: string) => (section === key ? "page" : undefined);
 ---

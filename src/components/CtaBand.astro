@@ -1,0 +1,20 @@
+---
+/* Grand bandeau d'appel à l'action avec photo. */
+import Photo from "./Photo.astro";
+import { waLink } from "../data/site";
+import { questionnaireLink } from "../data/questionnaire";
+interface Props { title?: string; lead?: string; photo?: string }
+const { title = "Parlons de votre projet.", lead = "Un conseiller francophone vous répond sur WhatsApp, sans engagement. Ou commencez par le questionnaire : en 3 minutes, vous savez où chercher.", photo = "coucher-soleil-plage" } = Astro.props;
+---
+<section class="ctaband">
+  <Photo src={photo} alt="" class="ctaband-img" sizes="100vw" widths={[640, 1024, 1600]} />
+  <div class="ctaband-shade"></div>
+  <div class="wrap ctaband-in reveal">
+    <h2>{title}</h2>
+    <p>{lead}</p>
+    <div class="cta">
+      <a class="btn btn-wa btn-lg" href={waLink("Bonjour, je souhaite parler de mon projet immobilier en Israël.")} target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa" /></svg>Écrire sur WhatsApp</a>
+      <a class="btn btn-light btn-lg" href={questionnaireLink("olim")}>Trouver ma ville</a>
+    </div>
+  </div>
+</section>

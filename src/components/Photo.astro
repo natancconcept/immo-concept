@@ -1,0 +1,14 @@
+---
+/* Photo optimisée (WebP/AVIF, bonnes tailles). `src` = nom d'une photo de src/assets/photos,
+   ou une adresse (/realisations/…, https://…) pour une image non optimisée. */
+import { Picture } from "astro:assets";
+import { PHOTOS } from "../data/photos";
+interface Props { src: string; alt: string; class?: string; sizes?: string; widths?: number[]; eager?: boolean }
+const { src, alt, class: cls, sizes = "(max-width: 900px) 100vw, 50vw", widths = [480, 800, 1200, 1600], eager = false } = Astro.props;
+const meta = PHOTOS[src];
+if (!meta && !src.startsWith("/") && !src.startsWith("http")) throw new Error(`Photo introuvable : "${src}" (vérifiez src/assets/photos)`);
+const ws = meta ? widths.filter((w) => w <= meta.width) : [];
+---
+{meta
+  ? <Picture src={meta} alt={alt} class={cls} formats={["avif", "webp"]} widths={ws.length ? ws : [meta.width]} sizes={sizes} loading={eager ? "eager" : "lazy"} fetchpriority={eager ? "high" : undefined} />
+  : <img src={src} alt={alt} class={cls} loading={eager ? "eager" : "lazy"} decoding="async" />}

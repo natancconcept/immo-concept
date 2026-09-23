@@ -1,0 +1,16 @@
+---
+/* Avis clients. N'affiche que les vrais témoignages (sans `demo: true`) : rien tant qu'il n'y en a pas. */
+import { PUBLIC_GALLERY, type TestimonialItem } from "../data/gallery";
+import GalleryCard from "./GalleryCard.astro";
+interface Props { limit?: number }
+const { limit = 3 } = Astro.props;
+const items = PUBLIC_GALLERY.filter((g): g is TestimonialItem => g.type === "testi").slice(0, limit);
+---
+{items.length > 0 && (
+  <section class="flip">
+    <div class="wrap">
+      <div class="sec-head"><span class="eyebrow">Ils nous ont fait confiance</span><h2>Ce que disent nos clients.</h2></div>
+      <div class="gal">{items.map((it) => <GalleryCard item={it} />)}</div>
+    </div>
+  </section>
+)}

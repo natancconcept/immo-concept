@@ -1,21 +1,34 @@
 ---
 import Base from "../layouts/Base.astro";
-import Crumbs from "../components/Crumbs.astro";
+import PageHero from "../components/PageHero.astro";
 import Gallery from "../components/Gallery.astro";
-import { GALLERY } from "../data/gallery";
-const hasDemo = GALLERY.some((g) => g.demo);
+import Engagements from "../components/Engagements.astro";
+import CtaBand from "../components/CtaBand.astro";
+import { PUBLIC_GALLERY } from "../data/gallery";
+import { waLink } from "../data/site";
+const hasDemo = PUBLIC_GALLERY.some((g) => g.demo);
 ---
 <Base title="Réalisations et témoignages" description="Chantiers avant/après, biens vendus et témoignages de nos clients francophones en Israël, en photo et en vidéo.">
-  <section class="page-hero">
-    <div class="wrap">
-      <Crumbs items={[{ label: "Réalisations" }]} />
-      <h1>Réalisations et témoignages</h1>
-      <p class="lead">Chantiers avant/après, biens vendus et témoignages de nos clients, en photo et en vidéo.{hasDemo && <> <span class="ph">Contenu d’exemple</span> Les cartes marquées « exemple » montrent la mise en page : elles seront remplacées par vos vraies photos, vidéos et avis clients.</>}</p>
-    </div>
-  </section>
+  <PageHero photo="cuisine-moderne" photoAlt="Cuisine moderne entièrement rénovée" crumbs={[{ label: "Réalisations" }]}
+    title="Réalisations et témoignages"
+    lead="Chantiers avant/après, biens vendus et avis de nos clients, en photo et en vidéo." />
   <section>
     <div class="wrap">
-      <Gallery items={GALLERY} filters />
+      {hasDemo && <p class="lead" style="margin-bottom:22px"><span class="ph">Contenu d’exemple</span> Les cartes marquées « exemple » montrent la mise en page.</p>}
+      {PUBLIC_GALLERY.length > 0
+        ? <Gallery items={PUBLIC_GALLERY} filters />
+        : <div class="empty reveal">
+            <h2>Nos réalisations arrivent ici.</h2>
+            <p>Nous préparons la présentation de nos chantiers, ventes et avis clients, avec les vrais chiffres. En attendant, demandez‑nous des exemples de dossiers : nous vous les montrons avec plaisir.</p>
+            <a class="btn btn-wa btn-lg" href={waLink("Bonjour, pouvez‑vous me montrer des exemples de vos réalisations ?")} target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa" /></svg>Demander des exemples</a>
+          </div>}
     </div>
   </section>
+  <section class="flip">
+    <div class="wrap">
+      <div class="sec-head reveal"><span class="eyebrow">Nos engagements</span><h2>Ce que vous pouvez attendre de nous.</h2></div>
+      <Engagements />
+    </div>
+  </section>
+  <CtaBand />
 </Base>

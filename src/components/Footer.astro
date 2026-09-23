@@ -2,6 +2,7 @@
 import { SITE, phoneDisplay, waLink } from "../data/site";
 import { CITIES } from "../data/cities";
 import { questionnaireLink } from "../data/questionnaire";
+import { PUBLIC_GALLERY } from "../data/gallery";
 ---
 <footer>
   <div class="wrap foot">
@@ -11,7 +12,8 @@ import { questionnaireLink } from "../data/questionnaire";
       WhatsApp : <a href={waLink()} target="_blank" rel="noopener" style="color:inherit">{phoneDisplay()}</a> {SITE.provisional && <span class="ph">numéro provisoire</span>}<br>
       E‑mail : <a href={`mailto:${SITE.email}`} style="color:inherit">{SITE.email}</a>
     </div>
-    <div class="foot-col"><b>Nos services</b><a href="/alyah">Alyah</a><a href="/investissement">Investissement locatif</a><a href="/coup-de-fusil">Coup de fusil</a><a href={questionnaireLink("olim")}>Trouver ma ville</a><a href="/simulateur">Simulateur</a><a href="/realisations">Réalisations</a></div>
+    <div class="foot-col"><b>Nos services</b><a href="/alyah">Alyah</a><a href="/investissement">Investissement locatif</a><a href="/coup-de-fusil">Coup de fusil</a><a href={questionnaireLink("olim")}>Trouver ma ville</a><a href="/simulateur">Simulateur</a>{PUBLIC_GALLERY.length > 0 && <a href="/realisations">Réalisations</a>}</div>
     <div class="foot-col"><b>Villes</b><div class="foot-cities">{CITIES.map((c) => <a href={`/villes/${c.id}`}>{c.name}</a>)}</div></div>
   </div>
+  <div class="wrap foot-legal">© {new Date().getFullYear()} {SITE.name} · Chiffres indicatifs, sans valeur d’offre · Photos d’illustration : Unsplash</div>
 </footer>

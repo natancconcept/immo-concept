@@ -1,7 +1,10 @@
 ---
 import Base from "../layouts/Base.astro";
-import Crumbs from "../components/Crumbs.astro";
+import PageHero from "../components/PageHero.astro";
 import Steps from "../components/Steps.astro";
+import Photo from "../components/Photo.astro";
+import Engagements from "../components/Engagements.astro";
+import Testimonials from "../components/Testimonials.astro";
 import FormSection from "../components/FormSection.astro";
 import { questionnaireLink } from "../data/questionnaire";
 
@@ -10,34 +13,63 @@ const FAQ = [
   ["Quels frais prévoir en plus du prix ?", "Les honoraires d’avocat, la taxe d’achat (Mas Rechisha) selon votre situation, et les éventuels frais d’agence. Les olim bénéficient d’un barème spécifique sous conditions : notre avocat fait le calcul pour vous."],
   ["Faut‑il parler hébreu ?", "Non. Nous vous accompagnons en français à chaque étape, y compris chez l’avocat et à la banque."],
   ["Louer d’abord ou acheter directement ?", "Beaucoup d’olim louent un an pour découvrir la ville avant d’acheter. Nous vous accompagnons pour les deux, avec la même équipe."],
+  ["Combien de temps entre la première visite et les clés ?", "Pour un bien ancien, comptez en général 1 à 3 mois entre l’accord et la signature. Pour un programme neuf, la livraison dépend du chantier : nous vérifions les garanties du promoteur."],
 ];
 const faqLd = { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: FAQ.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) };
+
+/* Parcours types : exemples illustratifs de notre méthode, pas des témoignages. */
+const PARCOURS = [
+  { photo: "emmenagement", alt: "Un couple emménage avec ses cartons", who: "Une famille de 4 personnes, encore en France", want: "Acheter un 4 pièces près de la mer, avec des écoles à pied.",
+    steps: ["Questionnaire, puis appel : Netanya et Ashdod ressortent", "Visites en vidéo de 6 biens, rapport écrit sur chacun", "Voyage de 5 jours : 3 visites finales, offre acceptée", "Avocat, prêt, signature : les clés à l’arrivée"] },
+  { photo: "interieur-soleil", alt: "Salon ensoleillé avec plantes", who: "Un couple de retraités", want: "Du calme, un jardin, un hôpital proche et une communauté francophone.",
+    steps: ["Location d’un an pour tester la ville", "Sélection de rez‑de‑jardin à Ashkelon et Netanya", "Vérification des accès, commerces et hôpital", "Achat, puis petits travaux par nos artisans"] },
+  { photo: "interieur-blanc", alt: "Appartement blanc et lumineux", who: "Un jeune actif dans la high‑tech", want: "Un 3 pièces bien relié à Tel Aviv, pour habiter puis louer.",
+    steps: ["Comparatif Ramat Gan, Petah Tikva, Herzliya", "Simulation : mensualité face au loyer local", "Achat sur plan, contrôle des garanties", "Mise en location le jour de la livraison"] },
+];
 ---
 <Base title="Alyah : acheter ou louer votre logement en Israël" description="Acheter ou louer votre logement pour votre alyah : recherche ciblée, visites en vidéo, avocat francophone, financement et remise des clés, en français.">
   <script slot="head" type="application/ld+json" set:html={JSON.stringify(faqLd)} />
-  <section class="page-hero">
-    <div class="wrap">
-      <Crumbs items={[{ label: "Alyah" }]} />
-      <span class="he big-he" lang="he">עלייה</span>
-      <h1>Acheter ou louer votre logement pour votre alyah</h1>
-      <p class="lead">Que vous soyez encore en France ou déjà arrivé, on trouve avec vous la bonne ville, le bon quartier et le bon logement, et on s’occupe du juridique jusqu’à la remise des clés.</p>
-      <div class="cta"><a class="btn btn-primary btn-lg" href={questionnaireLink("olim")}>Trouver ma ville</a><a class="btn btn-ghost btn-lg" href="/simulateur?mode=achat">Simuler un achat</a></div>
-    </div>
-  </section>
+  <PageHero photo="interieur-soleil" photoAlt="Salon lumineux baigné de soleil" he="עלייה" crumbs={[{ label: "Alyah" }]}
+    title="Votre logement pour votre alyah"
+    lead="Encore en France ou déjà arrivé, on trouve avec vous la bonne ville, le bon quartier et le bon logement, et on s’occupe du juridique jusqu’à la remise des clés.">
+    <a class="btn btn-primary btn-lg" href={questionnaireLink("olim")}>Trouver ma ville</a>
+    <a class="btn btn-ghost btn-lg" href="/simulateur?mode=achat">Simuler un achat</a>
+  </PageHero>
+
   <section>
     <div class="wrap">
-      <div class="sec-head"><span class="eyebrow">Ce que nous faisons pour vous</span><h2>Tout le parcours, en français.</h2></div>
+      <div class="sec-head reveal"><span class="eyebrow">Ce que nous faisons pour vous</span><h2>Tout le parcours, en français.</h2></div>
       <div class="features">
-        <div><h3>Recherche ciblée</h3><p>Selon votre ville, votre budget, votre pratique et l’école des enfants.</p></div>
-        <div><h3>Visites à distance</h3><p>Visites en vidéo et rapport détaillé si vous êtes encore à l’étranger.</p></div>
-        <div><h3>Avocat intégré</h3><p>Vérification du bien au cadastre (Tabou), contrat, taxes, signature.</p></div>
-        <div><h3>Financement</h3><p>Aide pour le prêt immobilier et les démarches bancaires d’olim.</p></div>
+        <div class="reveal"><h3>Recherche ciblée</h3><p>Selon votre ville, votre budget, votre pratique et l’école des enfants.</p></div>
+        <div class="reveal"><h3>Visites à distance</h3><p>Visites en vidéo et rapport détaillé si vous êtes encore à l’étranger.</p></div>
+        <div class="reveal"><h3>Avocat intégré</h3><p>Vérification du bien au cadastre (Tabou), contrat, taxes, signature.</p></div>
+        <div class="reveal"><h3>Financement</h3><p>Aide pour le prêt immobilier et les démarches bancaires d’olim.</p></div>
       </div>
     </div>
   </section>
+
   <section class="flip">
     <div class="wrap">
-      <div class="sec-head"><span class="eyebrow">Votre parcours</span><h2>De la première question à la remise des clés.</h2></div>
+      <div class="sec-head reveal"><span class="eyebrow">Exemples de parcours</span><h2>Comment ça se passe, concrètement.</h2><p class="lead">Trois situations fréquentes, et la façon dont nous les accompagnons.</p></div>
+      <div class="parcours">
+        {PARCOURS.map((p) => (
+          <article class="parcours-card reveal">
+            <Photo src={p.photo} alt={p.alt} sizes="(max-width: 900px) 100vw, 33vw" widths={[480, 800]} />
+            <div class="parcours-body">
+              <span class="tool-tag">Exemple de parcours</span>
+              <h3>{p.who}</h3>
+              <p class="parcours-want">{p.want}</p>
+              <ol>{p.steps.map((s) => <li>{s}</li>)}</ol>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="sec-head reveal"><span class="eyebrow">Votre parcours</span><h2>De la première question à la remise des clés.</h2></div>
       <Steps items={[
         { title: "Questionnaire", text: "Vous répondez en ligne, un conseiller vous appelle.", who: "Conseiller" },
         { title: "Sélection", text: "Des biens choisis pour vous, dans les villes qui vous correspondent.", who: "Agent" },
@@ -48,9 +80,19 @@ const faqLd = { "@context": "https://schema.org", "@type": "FAQPage", mainEntity
       ]} />
     </div>
   </section>
+
+  <section class="flip">
+    <div class="wrap">
+      <div class="sec-head reveal"><span class="eyebrow">Nos engagements</span><h2>Ce que vous pouvez attendre de nous.</h2></div>
+      <Engagements />
+    </div>
+  </section>
+
+  <Testimonials />
+
   <section>
     <div class="wrap narrow">
-      <div class="sec-head"><span class="eyebrow">Questions fréquentes</span><h2>Ce que les olim nous demandent.</h2></div>
+      <div class="sec-head reveal"><span class="eyebrow">Questions fréquentes</span><h2>Ce que les olim nous demandent.</h2></div>
       <div class="faq">
         {FAQ.map(([q, a]) => <details><summary>{q}</summary><p>{a}</p></details>)}
       </div>

@@ -46,6 +46,7 @@ Pour tester le conseil de l’IA en local, copiez `.env.example` en `.env` et re
 | Les villes mises en avant sur l’accueil | `HOME_CITIES` dans `src/data/cities.ts` |
 | Hypothèses du simulateur (taux, durée du prêt, coût des travaux…) | bas de `src/data/cities.ts` |
 | Réalisations, ventes, témoignages, vidéos | `src/data/gallery.ts` |
+| Photos du site (accueil, villes, pages) | `src/assets/photos/` (liste et sources dans `SOURCES.md`) |
 | Opérations avant/après de la page Coup de fusil | `PROJECTS` dans `src/data/gallery.ts` |
 | Questions et réponses du questionnaire | `src/data/questionnaire.ts` |
 | Calcul de compatibilité des villes et prompt de l’IA | `src/lib/recommend.ts` |
@@ -53,6 +54,7 @@ Pour tester le conseil de l’IA en local, copiez `.env.example` en `.env` et re
 | En‑tête, pied de page, bouton WhatsApp flottant | `src/components/Header.astro`, `Footer.astro`, `WhatsAppFloat.astro` |
 | Couleurs, polices, espacements | `src/styles/global.css` (variables en haut du fichier) |
 | Image de partage (WhatsApp, Facebook…) | `public/og.png` (1200 × 630 px) |
+| Photo de chaque ville | champ `photo` de la ville dans `src/data/cities.ts` |
 | Icône de l’onglet | `public/favicon.svg` |
 
 ### Nom et numéro définitifs
@@ -70,18 +72,34 @@ Les prix moyens (`avg`) viennent du Bureau central des statistiques (fin 2025). 
 
 Pour ajouter une ville, copiez un bloc dans `CITIES` et changez son `id` : la page `/villes/<id>` est créée automatiquement, et la ville apparaît dans le simulateur, le questionnaire et le pied de page.
 
-### Photos et vidéos des réalisations
+### Photos
 
-1. Déposez les fichiers dans `public/realisations/` (photos au format 4/3, idéalement 1600 × 1200 px et moins de 400 Ko ; vidéos en `.mp4`).
-2. Dans `src/data/gallery.ts`, ajoutez sur l’élément concerné :
-   - `before: "/realisations/netanya-avant.jpg"` et `after: "/realisations/netanya-apres.jpg"` pour un avant/après ;
-   - `photo: "/realisations/ir-yamim.jpg"` pour une vente (ou l’affiche d’une vidéo) ;
-   - `videoUrl: "/realisations/famille-l.mp4"` pour un témoignage vidéo.
-3. Retirez `demo: true` quand le contenu est réel : l’étiquette « exemple » disparaît.
+Les photos du site sont dans `src/assets/photos/`. Ce sont pour l’instant des **photos d’illustration libres de droits** (Unsplash, usage commercial autorisé), listées avec leur source dans `src/assets/photos/SOURCES.md`.
 
-Tant qu’aucune image n’est fournie, une illustration dessinée provisoire s’affiche. Une réalisation apparaît aussi sur la page de sa ville quand son champ `city` (ou `from` pour un témoignage) contient le nom de la ville.
+- Pour **remplacer** une photo, déposez la vôtre avec le même nom de fichier (ex. `netanya.jpg`). Format paysage, au moins 1600 px de large.
+- Pour **ajouter** une photo, déposez‑la dans le dossier et utilisez son nom sans extension (ex. `photo: "netanya-front-de-mer"`).
+- Le site les convertit automatiquement en formats légers (WebP/AVIF) et aux bonnes tailles pour chaque écran.
+- Six villes (Ramat Gan, Petah Tikva, Modiin, Ra’anana, Beit Shemesh, Beer‑Sheva) ont une photo de leur région, faute de photo libre de la ville elle‑même : elles sont marquées `photoRegion: true` dans `cities.ts` et la fiche l’indique. À remplacer en priorité.
 
-La photo de l’accueil se change avec `heroPhoto` dans `src/data/site.ts`.
+### Réalisations et témoignages
+
+Les réalisations et témoignages de la maquette sont des **exemples** (`demo: true` dans `src/data/gallery.ts`). Ils sont **masqués du site public** : de faux avis présentés comme vrais tromperaient vos visiteurs, et c’est interdit. Tant qu’il n’y a aucun contenu réel :
+
+- la page Réalisations affiche « Nos réalisations arrivent ici » et disparaît du menu ;
+- la section « Ce que disent nos clients » ne s’affiche pas ;
+- la page Coup de fusil montre un avant/après avec des photos d’illustration, présentées comme telles.
+
+Pour publier du **vrai** contenu :
+
+1. Déposez les photos dans `src/assets/photos/` (ou les vidéos `.mp4` dans `public/realisations/`).
+2. Dans `src/data/gallery.ts`, ajoutez l’élément (ou modifiez un exemple) avec :
+   - `before: "netanya-avant"` et `after: "netanya-apres"` pour un avant/après ;
+   - `photo: "ir-yamim-salon"` pour une vente (ou l’affiche d’une vidéo) ;
+   - `videoUrl: "/realisations/famille-l.mp4"` pour un témoignage vidéo ;
+   - pour un témoignage : le prénom et l’initiale du client, sa ville d’origine, son projet et son texte, **avec son accord**.
+3. Retirez `demo: true`. L’élément apparaît aussitôt sur le site, et la page Réalisations revient dans le menu.
+
+Pour revoir les exemples pendant le développement, mettez `showExamples: true` dans `src/data/site.ts` (ne jamais mettre en ligne ainsi).
 
 ## Conseil rédigé par l’IA
 
@@ -130,5 +148,6 @@ src/
   layouts/      Base.astro : balises <head>, SEO, en‑tête et pied de page communs
   pages/        une page = une adresse ; pages/api/conseil.ts = route de l’IA
   styles/       global.css
-public/         fichiers servis tels quels : og.png, favicon.svg, realisations/
+src/assets/photos/  photos du site (optimisées automatiquement)
+public/         fichiers servis tels quels : og.png, favicon.svg, realisations/ (vidéos)
 ```

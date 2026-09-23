@@ -15,8 +15,10 @@ export const SITE = {
   years: 15,
   /** Tant que c'est true, les étiquettes « provisoire » s'affichent à côté du nom et du numéro. */
   provisional: true,
-  /** Photo de l'accueil (ex. "/realisations/accueil.jpg"). Vide = illustration dessinée. */
-  heroPhoto: "",
+  /** Photo de l'accueil : nom d'un fichier de src/assets/photos (sans l'extension). */
+  heroPhoto: "hero-tel-aviv-jaffa",
+  /** false = les réalisations et témoignages marqués `demo: true` sont masqués du site public. */
+  showExamples: false,
 };
 
 /** Initiales du logo, tirées du nom (ex. « A.B. Immo » → « AB », « Maison Soleil » → « MS »). */

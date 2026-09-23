@@ -2,6 +2,7 @@
 import Base from "../layouts/Base.astro";
 import Crumbs from "../components/Crumbs.astro";
 import Questionnaire from "../components/Questionnaire.astro";
+import Photo from "../components/Photo.astro";
 ---
 <Base title="Trouver ma ville en Israël" description="Famille, pratique religieuse, travail, santé, communauté francophone et budget : répondez au questionnaire et découvrez les villes d’Israël qui vous correspondent.">
   <section class="form-sec tall">
@@ -16,6 +17,10 @@ import Questionnaire from "../components/Questionnaire.astro";
           <li>Profession, lieu de travail et besoins de santé</li>
           <li>Budget, type de logement, neuf ou ancien</li>
         </ul>
+        <div class="tmv-photo">
+          <Photo src="promenade-tel-aviv" alt="Promenade bordée de palmiers au bord de la mer" sizes="(max-width: 900px) 100vw, 40vw" widths={[480, 800]} />
+          <span class="how-badge"><b>3 minutes</b><span>pour savoir où chercher</span></span>
+        </div>
       </div>
       <Questionnaire readQuery />
     </div>

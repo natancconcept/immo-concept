@@ -1,19 +1,16 @@
 ---
 import Base from "../layouts/Base.astro";
-import Crumbs from "../components/Crumbs.astro";
+import PageHero from "../components/PageHero.astro";
 import Simulator from "../components/Simulator.astro";
 import FormSection from "../components/FormSection.astro";
 ---
 <Base title="Investissement locatif en Israël" description="Investir dans le locatif en Israël : choix des quartiers selon le rendement, étude de rentabilité, recherche de locataires et gestion sur place. Simulateur de rendement par ville.">
-  <section class="page-hero">
-    <div class="wrap">
-      <Crumbs items={[{ label: "Investissement locatif" }]} />
-      <span class="he big-he" lang="he">השקעה</span>
-      <h1>Investir dans le locatif en Israël</h1>
-      <p class="lead">Acheter pour louer ou revendre un bien que vous possédez déjà : on vous montre les chiffres avant chaque décision, et on gère sur place.</p>
-      <div class="cta"><a class="btn btn-primary btn-lg" href="#formulaire">Décrire mon investissement</a></div>
-    </div>
-  </section>
+  <PageHero photo="interieur-blanc" photoAlt="Appartement blanc et lumineux, prêt à louer" he="השקעה" crumbs={[{ label: "Investissement locatif" }]}
+    title="Investir dans le locatif en Israël"
+    lead="Acheter pour louer ou revendre un bien que vous possédez déjà : on vous montre les chiffres avant chaque décision, et on gère sur place.">
+    <a class="btn btn-primary btn-lg" href="#formulaire">Décrire mon investissement</a>
+    <a class="btn btn-ghost btn-lg" href="#simulateur">Calculer un rendement</a>
+  </PageHero>
   <section>
     <div class="wrap">
       <div class="duo">
@@ -22,7 +19,7 @@ import FormSection from "../components/FormSection.astro";
       </div>
     </div>
   </section>
-  <section class="flip">
+  <section class="flip" id="simulateur">
     <div class="wrap">
       <div class="sec-head"><span class="eyebrow">Simulateur</span><h2>Quel rendement, ville par ville ?</h2><p class="lead">Changez la ville, la surface et l’apport pour comparer.</p></div>
       <Simulator mode="invest" />

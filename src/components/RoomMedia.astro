@@ -1,6 +1,7 @@
 ---
 /* Une photo si elle est fournie, sinon l'illustration dessinée provisoire. */
 import type { RoomKind } from "../data/gallery";
+import Photo from "./Photo.astro";
 interface Props {
   photo?: string; kind: RoomKind; seed: number; after?: boolean;
   alt: string; class?: string; width?: number; height?: number; eager?: boolean;
@@ -8,7 +9,7 @@ interface Props {
 const { photo, kind, seed, after = true, alt, class: cls, width = 800, height = 600, eager = false } = Astro.props;
 ---
 {photo
-  ? <img src={photo} alt={alt} class={cls} width={width} height={height} loading={eager ? "eager" : "lazy"} decoding="async" />
+  ? <Photo src={photo} alt={alt} class={cls} eager={eager} sizes="(max-width: 620px) 100vw, 33vw" />
   : <canvas data-room data-kind={kind} data-seed={seed} data-after={after ? "1" : "0"} width={width} height={height} class={cls} role="img" aria-label={alt}></canvas>}
 
 <script>

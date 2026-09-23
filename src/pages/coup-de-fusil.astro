@@ -1,23 +1,21 @@
 ---
 import Base from "../layouts/Base.astro";
-import Crumbs from "../components/Crumbs.astro";
+import PageHero from "../components/PageHero.astro";
 import Steps from "../components/Steps.astro";
 import Simulator from "../components/Simulator.astro";
 import BeforeAfter from "../components/BeforeAfter.astro";
 import FormSection from "../components/FormSection.astro";
-import { PROJECTS } from "../data/gallery";
+import { PUBLIC_PROJECTS } from "../data/gallery";
+const PROJECTS = PUBLIC_PROJECTS();
 import { shekK } from "../lib/format";
 ---
 <Base title="Coup de fusil : acheter, rénover, revendre en Israël" description="Opérations achat‑rénovation‑revente en Israël : repérage d’un bien sous‑évalué, plans par notre architecte, travaux tous corps de métier, revente et partage de la plus‑value.">
-  <section class="page-hero">
-    <div class="wrap">
-      <Crumbs items={[{ label: "Coup de fusil" }]} />
-      <span class="he big-he" lang="he">שיפוץ</span>
-      <h1>Coup de fusil : acheter, rénover, revendre</h1>
-      <p class="lead">On repère un bien sous‑évalué, notre architecte le repense, nos artisans le transforment entièrement, puis on le revend avec une plus‑value. Vous suivez tout, du début à la fin.</p>
-      <div class="cta"><a class="btn btn-primary btn-lg" href="#formulaire">Proposer une opération</a></div>
-    </div>
-  </section>
+  <PageHero photo="cuisine-en-travaux" photoAlt="Cuisine en cours de rénovation" he="שיפוץ" crumbs={[{ label: "Coup de fusil" }]}
+    title="Acheter, rénover, revendre"
+    lead="On repère un bien sous‑évalué, notre architecte le repense, nos artisans le transforment entièrement, puis on le revend avec une plus‑value. Vous suivez tout, semaine après semaine.">
+    <a class="btn btn-primary btn-lg" href="#formulaire">Proposer une opération</a>
+    <a class="btn btn-ghost btn-lg" href="#simulateur">Simuler une plus‑value</a>
+  </PageHero>
   <section>
     <div class="wrap">
       <div class="sec-head"><span class="eyebrow">Étape par étape</span><h2>On s’occupe de tout, vous suivez l’avancement.</h2><p class="lead">Chaque étape est tenue par un professionnel de notre équipe. Vous recevez photos et comptes rendus sur WhatsApp.</p></div>
@@ -30,36 +28,54 @@ import { shekK } from "../lib/format";
       ]} />
     </div>
   </section>
-  <section class="flip">
+  <section class="flip" id="simulateur">
     <div class="wrap">
       <div class="sec-head"><span class="eyebrow">Simulateur</span><h2>Combien peut rapporter une opération ?</h2></div>
-      <Simulator mode="flip" />
+      <Simulator mode="flip" city="telaviv" />
     </div>
   </section>
   <section>
     <div class="wrap">
-      <div class="sec-head"><span class="eyebrow">Avant / Après</span><h2>Glissez pour voir la transformation.</h2>{PROJECTS.some((p) => p.demo) && <p class="lead">Visuels et chiffres d’exemple, à remplacer par vos vrais chantiers.</p>}</div>
-      <div class="ba-grid" id="flipProjects">
-        <div>
-          {PROJECTS.map((p, i) => (
-            <div class="proj-view" data-i={i} hidden={i !== 0}>
-              <BeforeAfter before={p.before} after={p.after} kind={p.kind} seed={p.seed} label={`${p.title}, ${p.city}`} big />
-              <div class="figs"><div><small>Achat</small><b>{shekK(p.buy)}</b></div><div><small>Travaux</small><b>{shekK(p.works)}</b></div><div><small>Revente</small><b>{shekK(p.sale)}</b></div><div><small>Durée</small><b>{p.months} mois</b></div></div>
-            </div>
-          ))}
+      <div class="sec-head reveal"><span class="eyebrow">Avant / Après</span><h2>Glissez pour voir la transformation.</h2></div>
+      {PROJECTS.length > 0 ? (
+        <div class="ba-grid" id="flipProjects">
+          <div>
+            {PROJECTS.map((p, i) => (
+              <div class="proj-view" data-i={i} hidden={i !== 0}>
+                <BeforeAfter before={p.before} after={p.after} kind={p.kind} seed={p.seed} label={`${p.title}, ${p.city}`} big />
+                <div class="figs"><div><small>Achat</small><b>{shekK(p.buy)}</b></div><div><small>Travaux</small><b>{shekK(p.works)}</b></div><div><small>Revente</small><b>{shekK(p.sale)}</b></div><div><small>Durée</small><b>{p.months} mois</b></div></div>
+              </div>
+            ))}
+          </div>
+          <div class="projects">
+            {PROJECTS.map((p, i) => <button type="button" class="proj" data-i={i} aria-pressed={i === 0 ? "true" : "false"}><b>{p.title}</b><span class="meta">{p.city} · {p.months} mois de travaux {p.demo && <>· <span class="ph">exemple</span></>}</span></button>)}
+          </div>
         </div>
-        <div class="projects">
-          {PROJECTS.map((p, i) => <button type="button" class="proj" data-i={i} aria-pressed={i === 0 ? "true" : "false"}><b>{p.title}</b><span class="meta">{p.city} · {p.months} mois de travaux {p.demo && <>· <span class="ph">exemple</span></>}</span></button>)}
+      ) : (
+        <div class="ba-grid">
+          <div class="reveal">
+            <BeforeAfter before="chantier-avant" after="cuisine-moderne" kind="kitchen" seed={11} label="un appartement à rénover, puis refait à neuf" big />
+            <p class="photo-note">Photos d’illustration. Nos chantiers réels, avec leurs chiffres, seront présentés ici.</p>
+          </div>
+          <div class="reveal">
+            <h3 style="font-size:24px;margin-bottom:12px">Ce que change une rénovation complète</h3>
+            <ul class="ticks">
+              <li>Plans repensés par notre architecte : plus de lumière, plus d’espace utile</li>
+              <li>Électricité, plomberie, cuisine, salle de bain et sols entièrement refaits</li>
+              <li>Un bien prêt à vivre, qui se vend plus vite et plus cher</li>
+              <li>Photos et compte rendu chaque semaine sur WhatsApp</li>
+            </ul>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   </section>
   <FormSection eyebrow="Votre projet" title="Participer à une opération." lead="Dites‑nous votre capital et votre horizon, on vous présente les prochaines opérations." goal="flip" />
 </Base>
 
 <script>
-  const root = document.getElementById("flipProjects")!;
-  root.querySelectorAll<HTMLButtonElement>(".proj").forEach((b) => b.addEventListener("click", () => {
+  const root = document.getElementById("flipProjects");
+  if (root) root.querySelectorAll<HTMLButtonElement>(".proj").forEach((b) => b.addEventListener("click", () => {
     root.querySelectorAll<HTMLElement>(".proj-view").forEach((v) => (v.hidden = v.dataset.i !== b.dataset.i));
     root.querySelectorAll(".proj").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
   }));

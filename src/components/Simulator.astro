@@ -2,6 +2,7 @@
 /* Simulateur de budget par ville (acheter, louer, investir, coup de fusil).
    Un seul simulateur par page. Sur /simulateur, l'adresse peut préciser ?ville=netanya&mode=achat */
 import { CITIES, REGIONS } from "../data/cities";
+import { waLink } from "../data/site";
 export type SimMode = "achat" | "location" | "invest" | "flip";
 interface Props { mode?: SimMode; city?: string }
 const { mode = "achat", city = "netanya" } = Astro.props;
@@ -33,6 +34,10 @@ const MODES: [SimMode, string][] = [["achat", "Acheter"], ["location", "Louer"],
   <div class="card results" aria-live="polite">
     <div class="big" id="simBig"></div>
     <div class="bars" id="simBars"></div>
+    <div class="sim-cta">
+      <div><b>Un vrai chiffrage, bien par bien ?</b><span>Un conseiller vous répond en français sur WhatsApp.</span></div>
+      <a class="btn btn-wa" id="simWa" href={waLink()} target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa" /></svg>Recevoir une étude</a>
+    </div>
     <p class="note" id="simNote"></p>
     <div class="cities" id="cityChips">
       <span class="region">Comparer rapidement</span>
@@ -44,6 +49,7 @@ const MODES: [SimMode, string][] = [["achat", "Acheter"], ["location", "Louer"],
 <script>
   import { CITIES, RENO_M2, FLIP_DISCOUNT, FLIP_PREMIUM, FEES, RATE, YEARS } from "../data/cities";
   import { fmt, shek, shekK } from "../lib/format";
+  import { waLink } from "../data/site";
 
   const root = document.getElementById("simBlock");
   if (root) {
@@ -54,8 +60,11 @@ const MODES: [SimMode, string][] = [["achat", "Acheter"], ["location", "Louer"],
       mode: modes.includes(params.get("mode") || "") ? params.get("mode")! : root.dataset.mode!,
       city: CITIES.some((c) => c.id === params.get("ville")) ? params.get("ville")! : root.dataset.city!,
     };
+    const surface = +(params.get("surface") || 0);
     const citySel = $<HTMLSelectElement>("simCity"), sizeIn = $<HTMLInputElement>("simSize"), apportIn = $<HTMLInputElement>("simApport");
     const rate = String(RATE * 100).replace(".", ",");
+    if (surface >= 40 && surface <= 220) sizeIn.value = String(Math.round(surface / 5) * 5);
+    const MODE_LABEL: Record<string, string> = { achat: "acheter", location: "louer", invest: "investir dans le locatif", flip: "une opération achat‑rénovation‑revente" };
 
     const monthly = (principal: number) => { const r = RATE / 12, n = YEARS * 12; return principal * r / (1 - Math.pow(1 + r, -n)) };
     const bar = (label: string, val: number, max: number, cls = "") => {
@@ -95,11 +104,12 @@ const MODES: [SimMode, string][] = [["achat", "Acheter"], ["location", "Louer"],
         const gain = sale - buy - works - fees;
         big.innerHTML = `<div><small>Achat du bien à rénover</small><b>${shekK(buy)}</b><em>−${Math.round(FLIP_DISCOUNT * 100)} % vs marché</em></div>
           <div><small>Revente après travaux</small><b>${shekK(sale)}</b><em>environ 6 à 9 mois</em></div>
-          <div><small>Plus‑value brute</small><b style="color:var(--wa)">${shekK(gain)}</b><em>${(gain / (buy + works + fees) * 100).toFixed(0)} % du capital engagé</em></div>`;
+          <div><small>Plus‑value brute</small><b style="color:${gain >= 0 ? "var(--wa)" : "#C4323A"}">${shekK(gain)}</b><em>${(gain / (buy + works + fees) * 100).toFixed(0)} % du capital engagé</em></div>`;
         bars.innerHTML = bar("Achat", buy, sale) + bar("Architecte + travaux", works, sale, "soft") + bar("Frais (avocat, taxes…)", fees, sale, "soft") + bar("Plus‑value", gain, sale, "gain");
-        note.textContent = `Hypothèses de démonstration : travaux complets ${fmt(RENO_M2)} ₪/m², décote d’achat ${Math.round(FLIP_DISCOUNT * 100)} %, prime de revente ${Math.round(FLIP_PREMIUM * 100)} %, frais ${Math.round(FEES * 100)} %. Chaque opération fait l’objet d’une étude chiffrée avant l’achat.`;
+        note.textContent = (gain < 0 ? `À ${c.name}, avec ces hypothèses, l’opération n’est pas rentable : le prix de revente ne couvre pas l’achat, les travaux et les frais. C’est exactement ce que notre étude vérifie avant tout achat. ` : "") + `Hypothèses de démonstration : travaux complets ${fmt(RENO_M2)} ₪/m², décote d’achat ${Math.round(FLIP_DISCOUNT * 100)} %, prime de revente ${Math.round(FLIP_PREMIUM * 100)} %, frais ${Math.round(FEES * 100)} %. Chaque opération fait l’objet d’une étude chiffrée avant l’achat.`;
       }
       citySel.value = sim.city;
+      ($("simWa") as HTMLAnchorElement).href = waLink(`Bonjour, j’ai utilisé votre simulateur : je souhaite ${MODE_LABEL[sim.mode]} à ${c.name}, environ ${s} m². Pouvez‑vous m’envoyer une étude détaillée ?`);
       root!.querySelectorAll<HTMLButtonElement>("#simMode button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === sim.mode)));
       root!.querySelectorAll<HTMLButtonElement>("#cityChips button").forEach((b) => {
         const on = b.dataset.city === sim.city;

@@ -53,6 +53,7 @@ const org = {
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=Frank+Ruhl+Libre:wght@500&display=swap">
   <script type="application/ld+json" set:html={JSON.stringify(org)} />
+  <script is:inline>document.documentElement.classList.add("js")</script>
   <slot name="head" />
 </head>
 <body>
@@ -64,5 +65,13 @@ const org = {
   </main>
   <Footer />
   <WhatsAppFloat />
+  <script>
+    // Apparition douce des blocs au défilement.
+    const els = document.querySelectorAll(".reveal");
+    if ("IntersectionObserver" in window) {
+      const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target) } }), { rootMargin: "0px 0px -8% 0px" });
+      els.forEach((el) => io.observe(el));
+    } else els.forEach((el) => el.classList.add("in"));
+  </script>
 </body>
 </html>

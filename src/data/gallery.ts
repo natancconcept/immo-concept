@@ -1,14 +1,17 @@
 /* ---------- Réalisations et témoignages ----------
    Pour mettre du vrai contenu :
    1. Déposez les fichiers dans public/realisations/ (ex. public/realisations/netanya-avant.jpg).
-   2. Renseignez les champs avec l'adresse commençant par /realisations/ :
+   2. Renseignez les champs, soit avec le nom d'une photo de src/assets/photos (optimisée
+      automatiquement, recommandé), soit avec une adresse commençant par /realisations/ :
         photo    : photo principale (vente, témoignage, affiche de la vidéo)
         before   : photo AVANT travaux      after : photo APRÈS travaux
         videoUrl : vidéo .mp4 (témoignage vidéo)
-   3. Retirez `demo: true` : l'étiquette « exemple » disparaît.
+   3. Retirez `demo: true` : l'élément apparaît sur le site public (les exemples sont masqués).
    Sans photo, une illustration provisoire est dessinée (kind + seed choisissent le dessin).
 
    Les éléments apparaissent sur la page d'une ville quand `city` ou `from` contient le nom de la ville. */
+
+import { SITE } from "./site";
 
 export type RoomKind = "kitchen" | "living" | "bath";
 
@@ -52,6 +55,10 @@ export const GALLERY: GalleryItem[] = [
   {type:"sale", title:"Cottage 6 pièces", city:"Modiin, Buchman", kind:"living", seed:151, price:"4 350 000 ₪", days:61, profile:"Famille olim, Toulouse", demo:true},
   {type:"ba", title:"Cuisine et séjour", city:"Beer‑Sheva", kind:"kitchen", seed:161, works:"180 000 ₪", months:3, gain:"Loué 5 200 ₪/mois", demo:true},
 ];
+
+/** Éléments visibles sur le site public (sans les exemples si SITE.showExamples est false). */
+export const PUBLIC_GALLERY = GALLERY.filter((g) => SITE.showExamples || !g.demo);
+export const PUBLIC_PROJECTS = () => PROJECTS.filter((p) => SITE.showExamples || !p.demo);
 
 export const GAL_TYPES = { all: "Tout", ba: "Avant / Après", sale: "Ventes réalisées", testi: "Témoignages", video: "Vidéos" } as const;
 export type GalFilter = keyof typeof GAL_TYPES;

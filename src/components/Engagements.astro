@@ -1,0 +1,21 @@
+---
+/* Nos engagements : ce que chaque client peut attendre, noir sur blanc. */
+import { SITE } from "../data/site";
+const ITEMS = [
+  { t: "Un avocat dans chaque dossier", d: "Vérification au Tabou, contrat, taxes, signature : notre avocat francophone suit votre achat du début à la fin.", i: "M12 3v18M5 7h14M7 7l-3 7a3 3 0 0 0 6 0L7 7Zm10 0-3 7a3 3 0 0 0 6 0l-3-7Z" },
+  { t: "Une réponse sous 24 h, en français", d: "Un seul interlocuteur, joignable sur WhatsApp, qui connaît votre dossier et parle votre langue.", i: "M4 5h16v11H8l-4 4V5Z" },
+  { t: "Des visites en vidéo", d: "Encore en France ? Nous visitons pour vous, en direct, avec un avis honnête sur chaque bien.", i: "M3 7h12v10H3zM15 10l6-3v10l-6-3" },
+  { t: "Des chiffres avant chaque décision", d: "Prix, frais, taxes, mensualités, rendement : vous voyez tout, par écrit, avant de faire une offre.", i: "M4 20V10M10 20V4M16 20v-7M22 20H2" },
+  { t: "Des artisans que nous connaissons", d: "Maçons, électriciens, plombiers, menuisiers : des équipes avec qui nous travaillons depuis des années.", i: "m14 6 4 4M3 21l3-1 12-12-2-2L4 18l-1 3Z" },
+  { t: `${SITE.years} ans sur le terrain`, d: "Nous connaissons les quartiers, les écoles, les synagogues et les prix réels, ville par ville.", i: "M4 20V9l8-5 8 5v11M9 20v-6h6v6" },
+];
+---
+<div class="engage">
+  {ITEMS.map((it) => (
+    <div class="engage-item reveal">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={it.i} /></svg></span>
+      <h3>{it.t}</h3>
+      <p>{it.d}</p>
+    </div>
+  ))}
+</div>
