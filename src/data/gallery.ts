@@ -66,7 +66,7 @@ export type GalFilter = keyof typeof GAL_TYPES;
 export const matchesFilter = (g: GalleryItem, f: GalFilter) =>
   f === "all" || (f === "video" ? g.type === "testi" && !!g.video : g.type === f);
 
-/* ---------- Opérations « coup de fusil » : avant / après de la page /coup-de-fusil ----------
+/* ---------- Opérations « coup de fusil » : avant / après de la page /renovation-revente ----------
    Mêmes règles : before / after = photos dans public/realisations/, sinon dessin provisoire. */
 export interface FlipProject {
   title: string; city: string; kind: RoomKind; seed: number;
