@@ -1,0 +1,28 @@
+---
+import Base from "../layouts/Base.astro";
+import Crumbs from "../components/Crumbs.astro";
+import { SITE } from "../data/site";
+const L = SITE.legal;
+const val = (x: string) => x || "à compléter";
+---
+<Base title="Mentions légales" description={`Mentions légales du site ${SITE.name}.`}>
+  <section>
+    <div class="wrap prose">
+      <Crumbs items={[{ label: "Mentions légales" }]} />
+      <h1 style="font-size:40px;margin:10px 0 24px">Mentions légales</h1>
+      <h2>Éditeur du site</h2>
+      <p>{SITE.name}{L.company && ` (${L.company})`}<br>Adresse : {val(L.address)}<br>Enregistrement : {val(L.registration)}<br>Licence d’agent immobilier : {val(L.agentLicense)}<br>Responsable de la publication : {val(L.director)}<br>Contact : <a href={`mailto:${SITE.email}`}>{SITE.email}</a></p>
+      {!(L.company && L.address) && <p><span class="ph">informations à compléter dans src/data/site.ts</span></p>}
+      <h2>Hébergement</h2>
+      <p>Le site est hébergé par le prestataire choisi lors de la mise en ligne (Netlify ou Vercel). Ses coordonnées figurent sur son site.</p>
+      <h2>Informations et chiffres</h2>
+      <p>Les prix, loyers, rendements et simulations présentés sur ce site sont des ordres de grandeur indicatifs. Ils ne constituent ni une offre, ni un conseil juridique, fiscal ou financier. Chaque projet fait l’objet d’une étude personnalisée.</p>
+      <p>Les prix moyens par ville proviennent du Bureau central des statistiques d’Israël (fin 2025). Les autres chiffres sont des estimations de l’agence.</p>
+      <h2>Données personnelles</h2>
+      <p>Les informations saisies dans le questionnaire et le formulaire de contact ne sont pas enregistrées sur nos serveurs : elles sont transmises uniquement lorsque vous choisissez de nous envoyer un message (WhatsApp ou e‑mail). Pour le conseil rédigé par l’IA, vos réponses au questionnaire (sans nom ni téléphone) sont envoyées au service Claude d’Anthropic pour rédiger le texte.</p>
+      <p>Pour toute demande concernant vos données, écrivez‑nous à <a href={`mailto:${SITE.email}`}>{SITE.email}</a>.</p>
+      <h2>Photos</h2>
+      <p>Certaines photos sont des illustrations libres de droits issues d’Unsplash.</p>
+    </div>
+  </section>
+</Base>

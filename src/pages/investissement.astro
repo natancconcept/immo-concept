@@ -3,10 +3,14 @@ import Base from "../layouts/Base.astro";
 import PageHero from "../components/PageHero.astro";
 import Simulator from "../components/Simulator.astro";
 import FormSection from "../components/FormSection.astro";
+import Related from "../components/Related.astro";
+import { CITIES } from "../data/cities";
+const byYield = [...CITIES].sort((a, b) => b.rent / b.m2 - a.rent / a.m2).slice(0, 5);
+const yieldOf = (c: (typeof CITIES)[number]) => (c.rent * 12 / c.m2 * 100).toFixed(1).replace(".", ",");
 ---
 <Base title="Investissement locatif en Israël" description="Investir dans le locatif en Israël : choix des quartiers selon le rendement, étude de rentabilité, recherche de locataires et gestion sur place. Simulateur de rendement par ville.">
-  <PageHero photo="interieur-blanc" photoAlt="Appartement blanc et lumineux, prêt à louer" he="השקעה" crumbs={[{ label: "Investissement locatif" }]}
-    title="Investir dans le locatif en Israël"
+  <PageHero photo="interieur-blanc" photoAlt="Appartement blanc et lumineux, prêt à louer" he="השקעה" eyebrow="Investissement locatif" crumbs={[{ label: "Investissement locatif" }]}
+    title="Investir dans l’immobilier locatif en Israël"
     lead="Acheter pour louer ou revendre un bien que vous possédez déjà : on vous montre les chiffres avant chaque décision, et on gère sur place.">
     <a class="btn btn-primary btn-lg" href="#formulaire">Décrire mon investissement</a>
     <a class="btn btn-ghost btn-lg" href="#simulateur">Calculer un rendement</a>
@@ -19,11 +23,27 @@ import FormSection from "../components/FormSection.astro";
       </div>
     </div>
   </section>
-  <section class="flip" id="simulateur">
+  <section class="alt" id="simulateur">
     <div class="wrap">
-      <div class="sec-head"><span class="eyebrow">Simulateur</span><h2>Quel rendement, ville par ville ?</h2><p class="lead">Changez la ville, la surface et l’apport pour comparer.</p></div>
+      <div class="sec-head"><span class="kicker">Simulateur</span><h2>Quel rendement, ville par ville ?</h2><p class="lead">Changez la ville, la surface et l’apport pour comparer.</p></div>
       <Simulator mode="invest" />
     </div>
   </section>
-  <FormSection eyebrow="Votre projet" title="Parlons de votre investissement." lead="Trois questions, puis un conseiller vous envoie une première étude." goal="invest" />
+  <section>
+    <div class="wrap split">
+      <div>
+        <span class="kicker">Rendement par ville</span>
+        <h2 style="margin:12px 0 16px">Où le rendement locatif est le plus élevé</h2>
+        <p class="lead">Rendement brut estimé (loyers annuels ÷ prix). Le Sud et le Nord rapportent en général davantage, le Centre offre une meilleure valorisation à long terme.</p>
+        <a class="link" href="/villes" style="display:inline-block;margin-top:16px">Comparer toutes les villes</a>
+      </div>
+      <div class="card">
+        {byYield.map((c) => <div class="prow"><a href={`/villes/${c.id}`}>{c.name}</a><b>≈ {yieldOf(c)} %</b></div>)}
+        <p class="note">Estimations à affiner bien par bien.</p>
+      </div>
+    </div>
+  </section>
+
+  <FormSection eyebrow="Votre projet" title="Parlons de votre investissement" lead="Trois questions, puis un conseiller vous envoie une première étude." goal="invest" />
+  <Related exclude="/investissement" />
 </Base>

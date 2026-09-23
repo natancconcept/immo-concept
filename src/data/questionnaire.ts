@@ -27,7 +27,7 @@ const CITY_PAGE: Page = { title: "Villes et budget", q: [
 ]};
 
 export const GOALS: Record<GoalId, Goal> = {
-  olim: { he: "עלייה", label: "Je m’installe en Israël", sub: "Questionnaire complet et conseil de ville", slug: "alyah", pages: [
+  olim: { he: "עלייה", label: "Je m’installe en Israël", sub: "Achat ou location, avec le choix de la ville", slug: "alyah", pages: [
     { title: "Votre foyer", q: [
       { id: "family", label: "Situation", type: "chips", req: true, opts: ["Seul(e)", "En couple", "Famille avec enfants", "Parent seul avec enfants"] },
       { id: "kids", label: "Âge des enfants (plusieurs choix possibles)", type: "multi", opts: ["Pas d’enfants", "Moins de 6 ans", "6 à 12 ans", "13 à 18 ans", "Plus de 18 ans"], show: (a) => /enfants/.test(String(a.family || "")) },
@@ -60,7 +60,7 @@ export const GOALS: Record<GoalId, Goal> = {
       { id: "goal", label: "Votre priorité", type: "chips", req: true, opts: ["Rendement", "Valorisation", "Équilibre"] },
       { id: "fin", label: "Financement", type: "chips", req: true, opts: ["Comptant", "Avec prêt", "À étudier"] },
     ]}, CITY_PAGE]},
-  flip: { he: "שיפוץ", label: "Coup de fusil", sub: "Acheter, rénover, revendre avec plus‑value", slug: "coup-de-fusil", pages: [
+  flip: { he: "שיפוץ", label: "Rénovation & revente", sub: "Acheter, rénover, revendre avec une plus‑value", slug: "renovation-revente", pages: [
     { title: "Votre opération", q: [
       { id: "capital", label: "Capital disponible", type: "chips", req: true, opts: ["Moins de 500 000 ₪", "500 000 à 1,5 M ₪", "Plus de 1,5 M ₪"] },
       { id: "role", label: "Votre implication", type: "chips", req: true, opts: ["Je délègue tout", "Je veux suivre de près", "Associé actif"] },

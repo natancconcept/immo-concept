@@ -1,15 +1,17 @@
 ---
 import Base from "../layouts/Base.astro";
 import PageHero from "../components/PageHero.astro";
-import CtaBand from "../components/CtaBand.astro";
+import ContactBand from "../components/ContactBand.astro";
+import Related from "../components/Related.astro";
 import Simulator from "../components/Simulator.astro";
 ---
 <Base title="Simulateur de budget immobilier par ville" description="Acheter, louer, investir ou rénover pour revendre : estimez prix, mensualités, loyers, rendement et plus‑value dans 14 villes d’Israël.">
   <PageHero photo="interieur-vue-mer" photoAlt="Salle à manger avec vue sur la mer" crumbs={[{ label: "Simulateur" }]}
-    title="Combien pour votre projet ?"
-    lead="Choisissez une ville et un type de projet pour obtenir un ordre de grandeur immédiat. Nous affinons ensuite avec vous, bien par bien." />
+    eyebrow="Outil gratuit" title="Simulateur de budget immobilier"
+    lead="Achat, location, investissement ou rénovation : choisissez une ville et une surface pour obtenir un ordre de grandeur. Nous affinons ensuite avec vous, bien par bien." />
   <section>
     <div class="wrap"><Simulator /></div>
   </section>
-  <CtaBand />
+  <Related exclude="/simulateur" />
+  <ContactBand />
 </Base>

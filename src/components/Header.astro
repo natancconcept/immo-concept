@@ -1,29 +1,88 @@
 ---
 import { SITE, logoMark, waLink } from "../data/site";
+import { CITIES, REGIONS } from "../data/cities";
+import { SERVICES, TOOLS, AGENCY } from "../data/nav";
 import { questionnaireLink } from "../data/questionnaire";
-import { PUBLIC_GALLERY } from "../data/gallery";
 
-const NAV = [
-  { href: "/alyah", key: "alyah", label: "Alyah" },
-  { href: "/investissement", key: "investissement", label: "Investissement" },
-  { href: "/coup-de-fusil", key: "coup-de-fusil", label: "Coup de fusil" },
-  { href: "/villes", key: "villes", label: "Villes" },
-  { href: "/realisations", key: "realisations", label: "Réalisations" },
-].filter((n) => n.key !== "realisations" || PUBLIC_GALLERY.length > 0);
-const section = Astro.url.pathname.split("/")[1] || "";
-const current = (key: string) => (section === key ? "page" : undefined);
+const path = Astro.url.pathname.replace(/\/$/, "") || "/";
+const isIn = (links: { href: string }[]) => links.some((l) => path === l.href.split("?")[0]);
+const cur = (href: string) => (path === href.split("?")[0] ? "page" : undefined);
 ---
 <header class="top">
-  <div class="wrap">
-    <a class="logo" href="/"><span class="logo-mark" aria-hidden="true">{logoMark}</span><span class="logo-text">{SITE.name}</span></a>
-    <nav class="main" aria-label="Navigation principale">
-      {NAV.map((n) => <a href={n.href} data-nav={n.key} aria-current={current(n.key)}>{n.label}</a>)}
+  <div class="wrap top-in">
+    <a class="logo" href="/" aria-label={`${SITE.name}, accueil`}>
+      <span class="logo-mark" aria-hidden="true">{logoMark}</span>
+      <span class="logo-text"><b>{SITE.name}</b><small>Immobilier francophone en Israël</small></span>
+    </a>
+    <nav class="nav" aria-label="Navigation principale">
+      <div class:list={["dd", { current: isIn(SERVICES) }]}>
+        <button type="button" aria-expanded="false">Services</button>
+        <div class="dd-panel">
+          {SERVICES.map((s) => <a class="dd-item" href={s.href} aria-current={cur(s.href)}><b>{s.title}</b><span>{s.desc}</span></a>)}
+        </div>
+      </div>
+      <div class:list={["dd", { current: path.startsWith("/villes") }]}>
+        <button type="button" aria-expanded="false">Villes</button>
+        <div class="dd-panel dd-cities">
+          {REGIONS.map((r) => <div><h4>{r}</h4>{CITIES.filter((c) => c.region === r).map((c) => <a href={`/villes/${c.id}`}>{c.name}</a>)}</div>)}
+          <a class="dd-all" href="/villes">Comparer les {CITIES.length} villes ›</a>
+        </div>
+      </div>
+      <div class:list={["dd", { current: isIn(TOOLS) }]}>
+        <button type="button" aria-expanded="false">Outils</button>
+        <div class="dd-panel">
+          {TOOLS.map((s) => <a class="dd-item" href={s.href}><b>{s.title}</b><span>{s.desc}</span></a>)}
+        </div>
+      </div>
+      <div class:list={["dd", { current: isIn(AGENCY) }]}>
+        <button type="button" aria-expanded="false">L’agence</button>
+        <div class="dd-panel">
+          {AGENCY.map((s) => <a class="dd-item" href={s.href} aria-current={cur(s.href)}><b>{s.title}</b><span>{s.desc}</span></a>)}
+        </div>
+      </div>
     </nav>
-    <a class="btn btn-find" href={questionnaireLink("olim")}><svg aria-hidden="true"><use href="#pin" /></svg><span>Trouver ma ville</span></a>
-    <a class="btn btn-wa" href={waLink()} target="_blank" rel="noopener" aria-label="WhatsApp"><svg aria-hidden="true"><use href="#wa" /></svg><span>WhatsApp</span></a>
+    <div class="top-actions">
+      <a class="btn btn-primary btn-sm btn-find" href={questionnaireLink("olim")}><svg aria-hidden="true"><use href="#pin" /></svg><span>Trouver ma ville</span></a>
+      <a class="btn btn-wa btn-sm" href={waLink()} target="_blank" rel="noopener" aria-label="WhatsApp"><svg aria-hidden="true"><use href="#wa" /></svg><span>WhatsApp</span></a>
+      <button type="button" class="burger" aria-controls="mmenu" aria-expanded="false"><i></i><span>Menu</span></button>
+    </div>
   </div>
-  <nav class="mnav" aria-label="Navigation mobile">
-    {NAV.map((n) => <a href={n.href} aria-current={current(n.key)}>{n.label}</a>)}
-    <a href="/simulateur" aria-current={current("simulateur")}>Simulateur</a>
-  </nav>
 </header>
+
+<div class="mmenu" id="mmenu" role="dialog" aria-modal="true" aria-label="Menu">
+  <div class="wrap mmenu-head">
+    <a class="logo" href="/"><span class="logo-mark" aria-hidden="true">{logoMark}</span><span class="logo-text"><b>{SITE.name}</b></span></a>
+    <button type="button" class="mmenu-close">Fermer</button>
+  </div>
+  <nav class="wrap" aria-label="Menu mobile">
+    <h4>Services</h4>
+    {SERVICES.map((s) => <a href={s.href}>{s.title}</a>)}
+    <h4>Outils</h4>
+    {TOOLS.map((s) => <a href={s.href}>{s.title}</a>)}
+    <h4>L’agence</h4>
+    {AGENCY.map((s) => <a href={s.href}>{s.title}</a>)}
+    <h4>Villes</h4>
+    <div class="mm-cities">{CITIES.map((c) => <a href={`/villes/${c.id}`}>{c.name}</a>)}</div>
+    <a href="/villes">Comparer toutes les villes ›</a>
+    <div class="mm-actions">
+      <a class="btn btn-primary btn-lg" href={questionnaireLink("olim")}>Trouver ma ville</a>
+      <a class="btn btn-wa btn-lg" href={waLink()} target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa" /></svg>Écrire sur WhatsApp</a>
+    </div>
+  </nav>
+</div>
+
+<script>
+  // Menus déroulants (clic / clavier) et menu mobile.
+  const dds = [...document.querySelectorAll<HTMLElement>(".dd")];
+  const close = (except?: HTMLElement) => dds.forEach((d) => { if (d !== except) { d.classList.remove("open"); d.querySelector("button")!.setAttribute("aria-expanded", "false") } });
+  dds.forEach((d) => {
+    const b = d.querySelector("button")!;
+    b.addEventListener("click", () => { const open = !d.classList.contains("open"); close(d); d.classList.toggle("open", open); b.setAttribute("aria-expanded", String(open)) });
+  });
+  document.addEventListener("click", (e) => { if (!(e.target as Element).closest(".dd")) close() });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { close(); setMenu(false) } });
+  const menu = document.getElementById("mmenu")!, burger = document.querySelector<HTMLButtonElement>(".burger")!;
+  const setMenu = (open: boolean) => { menu.classList.toggle("open", open); document.body.classList.toggle("menu-open", open); burger.setAttribute("aria-expanded", String(open)) };
+  burger.addEventListener("click", () => setMenu(true));
+  menu.querySelector(".mmenu-close")!.addEventListener("click", () => setMenu(false));
+</script>

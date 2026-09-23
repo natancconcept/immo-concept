@@ -7,9 +7,9 @@ const { limit = 3 } = Astro.props;
 const items = PUBLIC_GALLERY.filter((g): g is TestimonialItem => g.type === "testi").slice(0, limit);
 ---
 {items.length > 0 && (
-  <section class="flip">
+  <section class="alt">
     <div class="wrap">
-      <div class="sec-head"><span class="eyebrow">Ils nous ont fait confiance</span><h2>Ce que disent nos clients.</h2></div>
+      <div class="sec-head"><h2>Ce que disent nos clients</h2></div>
       <div class="gal">{items.map((it) => <GalleryCard item={it} />)}</div>
     </div>
   </section>

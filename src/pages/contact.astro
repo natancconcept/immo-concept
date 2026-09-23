@@ -1,0 +1,63 @@
+---
+import Base from "../layouts/Base.astro";
+import PageHero from "../components/PageHero.astro";
+import Related from "../components/Related.astro";
+import { SITE, phoneDisplay, waLink } from "../data/site";
+import { CITIES } from "../data/cities";
+import { SERVICES } from "../data/nav";
+---
+<Base title="Contact" description="Contactez notre agence immobilière francophone en Israël : WhatsApp, e‑mail ou message en ligne. Premier échange sans engagement.">
+  <PageHero photo="cles" photoAlt="Remise des clés d’un appartement" eyebrow="Contact" crumbs={[{ label: "Contact" }]}
+    title="Parlons de votre projet" lead="Un conseiller francophone vous répond. Le premier échange est sans engagement." />
+
+  <section>
+    <div class="wrap contact-grid">
+      <div>
+        <h2>Nous joindre</h2>
+        <div class="contact-ways">
+          <a class="contact-way" href={waLink()} target="_blank" rel="noopener"><small>WhatsApp</small><b>{phoneDisplay()}</b><span>Le plus rapide, depuis la France comme depuis Israël.</span></a>
+          <a class="contact-way" href={`mailto:${SITE.email}`}><small>E‑mail</small><b>{SITE.email}</b><span>Pour nous envoyer des documents ou une description détaillée.</span></a>
+          <div><small>Zone d’intervention</small><b>Toute Israël</b><span>Priorité aux grandes villes. <a href="/villes">Voir nos villes</a>.</span></div>
+        </div>
+        {SITE.provisional && <p class="photo-note"><span class="ph">coordonnées provisoires</span></p>}
+      </div>
+      <div class="form-card">
+        <h2 style="font-size:26px;margin-bottom:6px">Envoyer un message</h2>
+        <p class="muted" style="margin-bottom:22px">Votre message s’ouvre dans WhatsApp, prêt à être envoyé.</p>
+        <form id="contactForm" novalidate>
+          <div class="row2">
+            <div class="field"><label for="cName">Nom et prénom</label><input type="text" id="cName" autocomplete="name" required></div>
+            <div class="field"><label for="cPhone">Téléphone</label><input type="tel" id="cPhone" autocomplete="tel" placeholder="+33 6… ou +972 5…"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label for="cTopic">Votre projet</label>
+              <select id="cTopic">{SERVICES.map((s) => <option>{s.title}</option>)}<option>Autre question</option></select></div>
+            <div class="field"><label for="cCity">Ville</label>
+              <select id="cCity"><option value="">Pas encore décidé</option>{CITIES.map((c) => <option>{c.name}</option>)}</select></div>
+          </div>
+          <div class="field"><label for="cMsg">Message</label><textarea id="cMsg" rows="5" placeholder="Votre situation, votre budget, vos délais…"></textarea></div>
+          <p class="err" id="cErr" role="alert"></p>
+          <button type="submit" class="btn btn-wa btn-lg"><svg aria-hidden="true"><use href="#wa" /></svg>Envoyer sur WhatsApp</button>
+          <p class="note">Vous préférez l’e‑mail ? <a id="cMail" href={`mailto:${SITE.email}`}>Envoyer le même message par e‑mail</a>.</p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <Related title="Avant de nous écrire" />
+</Base>
+
+<script>
+  import { SITE, waLink } from "../data/site";
+  const f = document.getElementById("contactForm") as HTMLFormElement;
+  const v = (id: string) => (document.getElementById(id) as HTMLInputElement).value.trim();
+  const text = () => [`Bonjour, je m’appelle ${v("cName")}.`, `Projet : ${v("cTopic")}${v("cCity") ? ` à ${v("cCity")}` : ""}.`, v("cMsg"), v("cPhone") ? `Téléphone : ${v("cPhone")}` : ""].filter(Boolean).join("\n");
+  const mail = document.getElementById("cMail") as HTMLAnchorElement;
+  f.addEventListener("input", () => { mail.href = `mailto:${SITE.email}?subject=${encodeURIComponent("Projet immobilier : " + v("cTopic"))}&body=${encodeURIComponent(text())}` });
+  f.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (v("cName").length < 2) { document.getElementById("cErr")!.textContent = "Indiquez votre nom."; return }
+    document.getElementById("cErr")!.textContent = "";
+    window.open(waLink(text()), "_blank", "noopener");
+  });
+</script>

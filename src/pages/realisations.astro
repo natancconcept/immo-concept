@@ -3,7 +3,8 @@ import Base from "../layouts/Base.astro";
 import PageHero from "../components/PageHero.astro";
 import Gallery from "../components/Gallery.astro";
 import Engagements from "../components/Engagements.astro";
-import CtaBand from "../components/CtaBand.astro";
+import ContactBand from "../components/ContactBand.astro";
+import Related from "../components/Related.astro";
 import { PUBLIC_GALLERY } from "../data/gallery";
 import { waLink } from "../data/site";
 const hasDemo = PUBLIC_GALLERY.some((g) => g.demo);
@@ -17,18 +18,19 @@ const hasDemo = PUBLIC_GALLERY.some((g) => g.demo);
       {hasDemo && <p class="lead" style="margin-bottom:22px"><span class="ph">Contenu d’exemple</span> Les cartes marquées « exemple » montrent la mise en page.</p>}
       {PUBLIC_GALLERY.length > 0
         ? <Gallery items={PUBLIC_GALLERY} filters />
-        : <div class="empty reveal">
-            <h2>Nos réalisations arrivent ici.</h2>
+        : <div class="empty">
+            <h2>Nos réalisations seront bientôt présentées ici</h2>
             <p>Nous préparons la présentation de nos chantiers, ventes et avis clients, avec les vrais chiffres. En attendant, demandez‑nous des exemples de dossiers : nous vous les montrons avec plaisir.</p>
             <a class="btn btn-wa btn-lg" href={waLink("Bonjour, pouvez‑vous me montrer des exemples de vos réalisations ?")} target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa" /></svg>Demander des exemples</a>
           </div>}
     </div>
   </section>
-  <section class="flip">
+  <section class="alt">
     <div class="wrap">
-      <div class="sec-head reveal"><span class="eyebrow">Nos engagements</span><h2>Ce que vous pouvez attendre de nous.</h2></div>
+      <div class="sec-head"><span class="kicker">Nos engagements</span><h2>Ce que vous pouvez attendre de nous</h2></div>
       <Engagements />
     </div>
   </section>
-  <CtaBand />
+  <Related />
+  <ContactBand />
 </Base>

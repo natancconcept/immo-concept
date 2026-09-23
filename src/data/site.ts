@@ -13,6 +13,14 @@ export const SITE = {
   url: "https://www.example.com",
   /** Années d'expérience affichées sur le site. */
   years: 15,
+  /** Mentions légales (à compléter). */
+  legal: {
+    company: "",        // raison sociale
+    address: "",        // adresse du siège
+    registration: "",   // numéro d'enregistrement de la société
+    director: "",       // responsable de la publication
+    agentLicense: "",   // numéro de licence d'agent immobilier (Israël)
+  },
   /** Tant que c'est true, les étiquettes « provisoire » s'affichent à côté du nom et du numéro. */
   provisional: true,
   /** Photo de l'accueil : nom d'un fichier de src/assets/photos (sans l'extension). */

@@ -9,7 +9,7 @@ import Photo from "../components/Photo.astro";
     <div class="wrap form-grid">
       <div class="sec-head">
         <Crumbs items={[{ label: "Trouver ma ville" }]} />
-        <h1 class="h1-sm">Trouvez votre ville en Israël.</h1>
+        <h1 style="font-size:clamp(32px,4vw,46px)">Trouver ma ville en Israël</h1>
         <p class="lead">Pour une alyah, le questionnaire tient compte de votre famille, de votre pratique religieuse, de votre métier, de votre santé, de la communauté francophone et de votre budget. Vous obtenez tout de suite les villes qui vous correspondent le mieux, puis un conseiller vous recontacte sur WhatsApp.</p>
         <ul class="asks">
           <li>Famille, enfants et âge</li>
@@ -19,7 +19,7 @@ import Photo from "../components/Photo.astro";
         </ul>
         <div class="tmv-photo">
           <Photo src="promenade-tel-aviv" alt="Promenade bordée de palmiers au bord de la mer" sizes="(max-width: 900px) 100vw, 40vw" widths={[480, 800]} />
-          <span class="how-badge"><b>3 minutes</b><span>pour savoir où chercher</span></span>
+          
         </div>
       </div>
       <Questionnaire readQuery />

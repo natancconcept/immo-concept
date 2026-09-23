@@ -4,182 +4,127 @@ import CityCard from "../components/CityCard.astro";
 import Photo from "../components/Photo.astro";
 import Engagements from "../components/Engagements.astro";
 import Testimonials from "../components/Testimonials.astro";
-import CtaBand from "../components/CtaBand.astro";
+import ContactBand from "../components/ContactBand.astro";
 import { SITE } from "../data/site";
-import { CITIES, HOME_CITIES, REGIONS } from "../data/cities";
-import { questionnaireLink } from "../data/questionnaire";
-const olim = questionnaireLink("olim");
+import { CITIES, HOME_CITIES } from "../data/cities";
+import { SERVICES, TOOLS } from "../data/nav";
 const home = HOME_CITIES.map((id) => CITIES.find((c) => c.id === id)).filter((c) => !!c);
-const MODES = [["achat", "Acheter"], ["location", "Louer"], ["invest", "Investir"], ["flip", "Rénover & revendre"]];
+const POINTS: Record<string, string[]> = {
+  "/alyah": ["Choix de la ville et du quartier", "Visites sur place ou en vidéo", "Vérification juridique et financement"],
+  "/investissement": ["Étude de rentabilité avant l’achat", "Recherche de locataires et bail", "Gestion sur place, point mensuel"],
+  "/renovation-revente": ["Repérage et négociation du bien", "Plans d’architecte et travaux", "Remise en vente et partage du gain"],
+};
 ---
-<Base title="L’immobilier en Israël, en français" description={`Acheter, louer ou investir en Israël avec une équipe francophone : trouvez votre ville, simulez votre budget, avocat et artisans inclus. ${SITE.years} ans d’expérience.`}>
-  <section class="hero2">
-    <Photo src={SITE.heroPhoto} alt="Tel Aviv et Jaffa vues du ciel, au bord de la Méditerranée" class="hero2-img" sizes="100vw" widths={[640, 1024, 1600]} eager />
-    <div class="hero2-shade"></div>
-    <div class="wrap hero2-in">
-      <span class="pill-glass">Alyah · Investissement · Rénovation</span>
-      <h1>L’immobilier en Israël,<br><em>enfin en français.</em></h1>
-      <p class="hero2-lead">Trouvez la ville faite pour vous, estimez votre budget en un clin d’œil, et laissez notre équipe (avocats, architectes, artisans) s’occuper du reste.</p>
-
-      <form class="search" id="heroSearch" action="/simulateur" method="get">
-        <div class="search-tabs" role="tablist" aria-label="Type de projet">
-          {MODES.map(([m, l], i) => <button type="button" role="tab" data-mode={m} aria-selected={i === 0 ? "true" : "false"}>{l}</button>)}
-        </div>
-        <input type="hidden" name="mode" value="achat">
-        <div class="search-row">
-          <label class="search-field">
-            <span>Ville</span>
-            <select name="ville">
-              {REGIONS.map((r) => <optgroup label={r}>{CITIES.filter((c) => c.region === r).map((c) => <option value={c.id} selected={c.id === "netanya"}>{c.name}</option>)}</optgroup>)}
-            </select>
-          </label>
-          <label class="search-field">
-            <span>Surface</span>
-            <select name="surface">
-              <option value="70">2‑3 pièces · 70 m²</option>
-              <option value="100" selected>4 pièces · 100 m²</option>
-              <option value="130">5 pièces · 130 m²</option>
-              <option value="170">Maison · 170 m²</option>
-            </select>
-          </label>
-          <button class="btn btn-primary search-go" type="submit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Estimer</button>
-        </div>
-        <p class="search-alt">Vous ne savez pas encore où vivre ? <a href={olim}>Trouver ma ville en 3 minutes →</a></p>
-      </form>
+<Base title="Agence immobilière francophone en Israël" description={`Agence immobilière francophone en Israël : achat et location pour votre alyah, investissement locatif, rénovation et revente. Avocats, architectes et artisans, depuis ${SITE.years} ans.`}>
+  <section class="hero">
+    <Photo src={SITE.heroPhoto} alt="Tel Aviv et Jaffa vues du ciel, au bord de la Méditerranée" class="hero-img" sizes="100vw" widths={[640, 1024, 1600]} eager />
+    <div class="hero-shade"></div>
+    <div class="wrap hero-in">
+      <span class="kicker">Achat · Location · Investissement · Rénovation</span>
+      <h1>Agence immobilière francophone en Israël</h1>
+      <p class="hero-lead">Nous accompagnons les francophones qui achètent, louent, investissent ou rénovent en Israël : recherche du bien, vérifications par notre avocat, financement et travaux. Une seule équipe, en français, du premier échange à la remise des clés.</p>
+      <div class="cta">
+        <a class="btn btn-primary btn-lg" href="#services">Voir nos services</a>
+        <a class="btn btn-outline-light btn-lg" href="/contact">Parler à un conseiller</a>
+      </div>
+      <div class="hero-facts">
+        <span><b>{SITE.years} ans</b> d’expérience en Israël</span>
+        <span><b>{CITIES.length} villes</b> suivies</span>
+        <span><b>Avocat</b> dans chaque dossier</span>
+      </div>
     </div>
   </section>
 
-  <div class="trust">
-    <div class="wrap trust-in">
-      <div><b>{SITE.years} ans</b><span>en Israël</span></div>
-      <div><b>{CITIES.length} villes</b><span>analysées pour vous</span></div>
-      <div><b>Avocat</b><span>dans chaque dossier</span></div>
-      <div><b>24 h</b><span>pour vous répondre</span></div>
+  <section id="services">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="kicker">Nos services</span>
+        <h2>Que souhaitez‑vous faire en Israël ?</h2>
+        <p class="lead">Trois métiers, une même équipe. Choisissez votre projet pour voir comment nous travaillons.</p>
+      </div>
+      <div class="services">
+        {SERVICES.map((s) => (
+          <a class="service" href={s.href}>
+            <Photo src={s.photo!} alt={s.photoAlt!} sizes="(max-width: 900px) 100vw, 33vw" widths={[480, 800]} />
+            <div class="service-body">
+              <span class="he" lang="he">{s.he}</span>
+              <h3>{s.title}</h3>
+              <p>{s.desc}</p>
+              <ul>{POINTS[s.href].map((p) => <li>{p}</li>)}</ul>
+              <span class="link">En savoir plus</span>
+            </div>
+          </a>
+        ))}
+      </div>
     </div>
-  </div>
+  </section>
+
+  <section class="alt">
+    <div class="wrap intro">
+      <div class="intro-text">
+        <span class="kicker">L’agence</span>
+        <h2 style="margin:12px 0 20px">Tous les métiers de l’immobilier, sous le même toit</h2>
+        <p>Acheter en Israël quand on vient de France, c’est une autre langue, d’autres règles et d’autres usages. Notre agence réunit des conseillers francophones, des avocats, un architecte et des artisans de tous corps de métier.</p>
+        <p>Vous avez un seul interlocuteur, qui coordonne tout le monde et vous tient informé sur WhatsApp, que vous soyez en France ou déjà installé.</p>
+        <a class="link" href="/agence">Découvrir l’agence</a>
+      </div>
+      <div class="facts">
+        <div><b>{SITE.years} ans</b><span>d’accompagnement en Israël</span></div>
+        <div><b>{CITIES.length}</b><span>villes suivies, surtout les grandes</span></div>
+        <div><b>Avocats</b><span>intégrés à chaque dossier</span></div>
+        <div><b>Artisans</b><span>de tous corps de métier</span></div>
+      </div>
+    </div>
+  </section>
 
   <section>
     <div class="wrap">
-      <div class="sec-head center reveal">
-        <span class="eyebrow">Nos outils, gratuits</span>
-        <h2>Décidez avec les bons chiffres.</h2>
-        <p class="lead">Trois outils pour y voir clair avant même de nous appeler.</p>
+      <div class="sec-head">
+        <span class="kicker">Notre méthode</span>
+        <h2>Comment se déroule un achat avec nous</h2>
+      </div>
+      <ol class="method">
+        <li><b>Votre projet</b><span>Un premier échange, ou le questionnaire en ligne, pour comprendre votre famille, votre budget et vos priorités.</span></li>
+        <li><b>La sélection</b><span>Des biens choisis pour vous, visités sur place ou en vidéo, avec notre avis sur chacun.</span></li>
+        <li><b>Les vérifications</b><span>Notre avocat contrôle le Tabou, les permis, les dettes éventuelles et le contrat avant toute offre.</span></li>
+        <li><b>Les clés</b><span>Financement, signature, enregistrement, et si besoin des travaux réalisés par nos artisans.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="alt">
+    <div class="wrap">
+      <div class="row-head">
+        <div class="sec-head">
+          <span class="kicker">Nos villes</span>
+          <h2>Où vivre en Israël ?</h2>
+          <p class="lead">Prix, loyers, vie sur place et quartiers recherchés : une fiche détaillée pour chaque ville.</p>
+        </div>
+        <a class="btn btn-ghost" href="/villes">Les {CITIES.length} villes</a>
+      </div>
+      <div class="city-grid three">
+        {home.map((c) => <CityCard city={c} />)}
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="kicker">Outils gratuits</span>
+        <h2>Préparez votre projet en ligne</h2>
       </div>
       <div class="tools">
-        <a class="tool reveal" href={olim}>
-          <div class="tool-ui">
-            <div class="ui-row best"><span>Netanya</span><b>89 %</b></div>
-            <div class="ui-meter"><i style="width:89%"></i></div>
-            <div class="ui-row"><span>Ashdod</span><b>85 %</b></div>
-            <div class="ui-meter"><i style="width:85%"></i></div>
-            <div class="ui-row"><span>Ra’anana</span><b>73 %</b></div>
-            <div class="ui-meter"><i style="width:73%"></i></div>
-          </div>
-          <span class="tool-tag">Questionnaire</span>
-          <h3>Trouver ma ville</h3>
-          <p>Famille, pratique religieuse, travail, santé, budget : les villes qui vous correspondent, avec les raisons.</p>
-          <span class="tool-go">Commencer <span aria-hidden="true">→</span></span>
-        </a>
-        <a class="tool reveal" href="/simulateur?mode=achat">
-          <div class="tool-ui">
-            <div class="ui-big"><small>Netanya · 100 m² · mensualité</small><b>10 038 ₪</b></div>
-            <div class="ui-bars"><i style="height:38%"></i><i style="height:62%"></i><i style="height:48%"></i><i style="height:80%"></i><i style="height:56%"></i></div>
-          </div>
-          <span class="tool-tag">Simulateur</span>
-          <h3>Mon budget, ville par ville</h3>
-          <p>Prix, apport, mensualité ou loyer : un ordre de grandeur immédiat pour 14 villes.</p>
-          <span class="tool-go">Simuler <span aria-hidden="true">→</span></span>
-        </a>
-        <a class="tool reveal" href="/simulateur?mode=invest">
-          <div class="tool-ui">
-            <div class="ui-big"><small>Beer‑Sheva · 100 m² · rendement brut</small><b class="up">4,0 %</b></div>
-            <div class="ui-row"><span>Prix estimé</span><b>1,35 M ₪</b></div>
-            <div class="ui-row"><span>Loyer attendu</span><b>4 500 ₪ / mois</b></div>
-          </div>
-          <span class="tool-tag">Investisseurs</span>
-          <h3>Rendement locatif</h3>
-          <p>Comparez le rendement et la plus‑value d’une rénovation dans chaque ville.</p>
-          <span class="tool-go">Calculer <span aria-hidden="true">→</span></span>
-        </a>
+        {TOOLS.map((t) => <a class="tool" href={t.href}><h3>{t.title}</h3><p>{t.desc}</p><span class="link">{t.href.startsWith("/simulateur") ? "Faire une simulation" : "Répondre au questionnaire"}</span></a>)}
       </div>
     </div>
   </section>
 
-  <section class="flip">
+  <section class="alt">
     <div class="wrap">
-      <div class="sec-head reveal">
-        <span class="eyebrow">Pour qui ?</span>
-        <h2>Un accompagnement pour chaque projet.</h2>
-      </div>
-      <div class="personas">
-        <a class="persona reveal" href="/alyah">
-          <Photo src="emmenagement" alt="Un couple emménage dans son nouvel appartement" sizes="(max-width: 900px) 100vw, 33vw" widths={[480, 800]} />
-          <div class="persona-body">
-            <span class="he" lang="he">עלייה</span>
-            <h3>Vous faites votre alyah</h3>
-            <p>Acheter ou louer, depuis la France ou sur place : la bonne ville, l’école des enfants, et l’avocat jusqu’aux clés.</p>
-            <span class="tool-go">Alyah <span aria-hidden="true">→</span></span>
-          </div>
-        </a>
-        <a class="persona reveal" href="/investissement">
-          <Photo src="interieur-vue-mer" alt="Salle à manger lumineuse avec vue sur la mer" sizes="(max-width: 900px) 100vw, 33vw" widths={[480, 800]} />
-          <div class="persona-body">
-            <span class="he" lang="he">השקעה</span>
-            <h3>Vous investissez à distance</h3>
-            <p>Étude de rentabilité, achat, locataires et gestion sur place, avec un point chaque mois sur WhatsApp.</p>
-            <span class="tool-go">Investissement <span aria-hidden="true">→</span></span>
-          </div>
-        </a>
-        <a class="persona reveal" href="/coup-de-fusil">
-          <Photo src="artisan-carrelage" alt="Un artisan découpe du carrelage sur un chantier" sizes="(max-width: 900px) 100vw, 33vw" widths={[480, 800]} />
-          <div class="persona-body">
-            <span class="he" lang="he">שיפוץ</span>
-            <h3>Vous voulez rénover et revendre</h3>
-            <p>On repère le bien sous‑évalué, on le transforme entièrement, on le revend avec une plus‑value.</p>
-            <span class="tool-go">Coup de fusil <span aria-hidden="true">→</span></span>
-          </div>
-        </a>
-      </div>
-    </div>
-  </section>
-
-  <section>
-    <div class="wrap">
-      <div class="sec-head row-head reveal">
-        <div><span class="eyebrow">Toute Israël, surtout les grandes villes</span><h2>Où voulez‑vous vivre ?</h2></div>
-        <a class="btn btn-ghost" href="/villes">Les {CITIES.length} villes <span aria-hidden="true">→</span></a>
-      </div>
-      <div class="city-grid home">
-        {home.map((c, i) => <CityCard city={c} big={i < 2} />)}
-      </div>
-    </div>
-  </section>
-
-  <section class="how">
-    <div class="wrap how-in">
-      <div class="how-media reveal">
-        <Photo src="cles" alt="Remise des clés d’un appartement" sizes="(max-width: 900px) 100vw, 45vw" widths={[480, 800, 1100]} />
-        <div class="how-badge"><b>Des clés en main</b><span>avocat, banque, travaux : on s’occupe de tout</span></div>
-      </div>
-      <div class="reveal">
-        <span class="eyebrow">Comment ça marche</span>
-        <h2 style="margin:12px 0 26px">De la première question à la remise des clés.</h2>
-        <ol class="how-steps">
-          <li><b>Vous nous dites ce que vous cherchez</b><span>Questionnaire en ligne ou message WhatsApp : 3 minutes suffisent.</span></li>
-          <li><b>On sélectionne et on visite</b><span>Des biens choisis pour vous, visités sur place ou en vidéo, avec notre avis honnête.</span></li>
-          <li><b>Notre avocat vérifie tout</b><span>Tabou, permis, dettes, contrat, taxes : aucune mauvaise surprise.</span></li>
-          <li><b>Vous recevez les clés</b><span>Financement, signature, et si besoin travaux par nos artisans.</span></li>
-        </ol>
-        <a class="btn btn-primary btn-lg" href={olim}>Commencer maintenant</a>
-      </div>
-    </div>
-  </section>
-
-  <section class="flip">
-    <div class="wrap">
-      <div class="sec-head reveal">
-        <span class="eyebrow">Nos engagements</span>
-        <h2>Ce que vous pouvez attendre de nous.</h2>
+      <div class="sec-head">
+        <span class="kicker">Pourquoi nous</span>
+        <h2>Nos engagements</h2>
       </div>
       <Engagements />
     </div>
@@ -187,17 +132,5 @@ const MODES = [["achat", "Acheter"], ["location", "Louer"], ["invest", "Investir
 
   <Testimonials />
 
-  <CtaBand />
+  <ContactBand />
 </Base>
-
-<script>
-  const f = document.getElementById("heroSearch") as HTMLFormElement | null;
-  if (f) {
-    const mode = f.querySelector<HTMLInputElement>('input[name="mode"]')!;
-    const tabs = [...f.querySelectorAll<HTMLButtonElement>("[data-mode]")];
-    tabs.forEach((t) => t.addEventListener("click", () => {
-      mode.value = t.dataset.mode!;
-      tabs.forEach((x) => x.setAttribute("aria-selected", String(x === t)));
-    }));
-  }
-</script>

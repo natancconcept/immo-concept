@@ -1,0 +1,19 @@
+---
+/* « À voir aussi » : liens vers les autres pages utiles, en bas de chaque page. */
+import { SERVICES, TOOLS, type NavLink } from "../data/nav";
+interface Props { exclude?: string; title?: string; extra?: (NavLink & { kind?: string })[] }
+const { exclude = "", title = "À voir aussi", extra = [] } = Astro.props;
+const items = [
+  ...extra,
+  ...SERVICES.filter((s) => s.href !== exclude).map((s) => ({ ...s, kind: "Service" })),
+  ...TOOLS.filter((s) => !s.href.startsWith(exclude || "§")).map((s) => ({ ...s, kind: "Outil gratuit" })),
+];
+---
+<section class="alt">
+  <div class="wrap">
+    <div class="sec-head"><h2>{title}</h2></div>
+    <div class="related">
+      {items.map((it) => <a href={it.href}><small>{it.kind}</small><b>{it.title}</b>{it.desc && <span>{it.desc}</span>}</a>)}
+    </div>
+  </div>
+</section>

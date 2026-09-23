@@ -6,6 +6,10 @@ import Photo from "../components/Photo.astro";
 import Engagements from "../components/Engagements.astro";
 import Testimonials from "../components/Testimonials.astro";
 import FormSection from "../components/FormSection.astro";
+import CityCard from "../components/CityCard.astro";
+import Related from "../components/Related.astro";
+import { CITIES } from "../data/cities";
+const franco = CITIES.filter((c) => c.franco >= 2).slice(0, 6);
 import { questionnaireLink } from "../data/questionnaire";
 
 const FAQ = [
@@ -30,33 +34,33 @@ const PARCOURS = [
 <Base title="Alyah : acheter ou louer votre logement en Israël" description="Acheter ou louer votre logement pour votre alyah : recherche ciblée, visites en vidéo, avocat francophone, financement et remise des clés, en français.">
   <script slot="head" type="application/ld+json" set:html={JSON.stringify(faqLd)} />
   <PageHero photo="interieur-soleil" photoAlt="Salon lumineux baigné de soleil" he="עלייה" crumbs={[{ label: "Alyah" }]}
-    title="Votre logement pour votre alyah"
-    lead="Encore en France ou déjà arrivé, on trouve avec vous la bonne ville, le bon quartier et le bon logement, et on s’occupe du juridique jusqu’à la remise des clés.">
+    title="Acheter ou louer votre logement en Israël"
+    eyebrow="Achat & location · Alyah" lead="Que vous soyez encore en France ou déjà installé, nous trouvons avec vous la ville, le quartier et le logement qui conviennent à votre famille, et nous gérons la partie juridique jusqu’à la remise des clés.">
     <a class="btn btn-primary btn-lg" href={questionnaireLink("olim")}>Trouver ma ville</a>
     <a class="btn btn-ghost btn-lg" href="/simulateur?mode=achat">Simuler un achat</a>
   </PageHero>
 
   <section>
     <div class="wrap">
-      <div class="sec-head reveal"><span class="eyebrow">Ce que nous faisons pour vous</span><h2>Tout le parcours, en français.</h2></div>
+      <div class="sec-head"><span class="kicker">Ce que nous faisons pour vous</span><h2>Tout le parcours, en français</h2></div>
       <div class="features">
-        <div class="reveal"><h3>Recherche ciblée</h3><p>Selon votre ville, votre budget, votre pratique et l’école des enfants.</p></div>
-        <div class="reveal"><h3>Visites à distance</h3><p>Visites en vidéo et rapport détaillé si vous êtes encore à l’étranger.</p></div>
-        <div class="reveal"><h3>Avocat intégré</h3><p>Vérification du bien au cadastre (Tabou), contrat, taxes, signature.</p></div>
-        <div class="reveal"><h3>Financement</h3><p>Aide pour le prêt immobilier et les démarches bancaires d’olim.</p></div>
+        <div><h3>Recherche ciblée</h3><p>Selon votre ville, votre budget, votre pratique et l’école des enfants.</p></div>
+        <div><h3>Visites à distance</h3><p>Visites en vidéo et rapport détaillé si vous êtes encore à l’étranger.</p></div>
+        <div><h3>Avocat intégré</h3><p>Vérification du bien au cadastre (Tabou), contrat, taxes, signature.</p></div>
+        <div><h3>Financement</h3><p>Aide pour le prêt immobilier et les démarches bancaires d’olim.</p></div>
       </div>
     </div>
   </section>
 
-  <section class="flip">
+  <section class="alt">
     <div class="wrap">
-      <div class="sec-head reveal"><span class="eyebrow">Exemples de parcours</span><h2>Comment ça se passe, concrètement.</h2><p class="lead">Trois situations fréquentes, et la façon dont nous les accompagnons.</p></div>
+      <div class="sec-head"><span class="kicker">Exemples de parcours</span><h2>Comment cela se passe, concrètement</h2><p class="lead">Trois situations fréquentes, et la façon dont nous les accompagnons.</p></div>
       <div class="parcours">
         {PARCOURS.map((p) => (
-          <article class="parcours-card reveal">
+          <article class="parcours-card">
             <Photo src={p.photo} alt={p.alt} sizes="(max-width: 900px) 100vw, 33vw" widths={[480, 800]} />
             <div class="parcours-body">
-              <span class="tool-tag">Exemple de parcours</span>
+              <span class="tag-note">Exemple de parcours</span>
               <h3>{p.who}</h3>
               <p class="parcours-want">{p.want}</p>
               <ol>{p.steps.map((s) => <li>{s}</li>)}</ol>
@@ -69,7 +73,7 @@ const PARCOURS = [
 
   <section>
     <div class="wrap">
-      <div class="sec-head reveal"><span class="eyebrow">Votre parcours</span><h2>De la première question à la remise des clés.</h2></div>
+      <div class="sec-head"><span class="kicker">Votre parcours</span><h2>De la première question à la remise des clés</h2></div>
       <Steps items={[
         { title: "Questionnaire", text: "Vous répondez en ligne, un conseiller vous appelle.", who: "Conseiller" },
         { title: "Sélection", text: "Des biens choisis pour vous, dans les villes qui vous correspondent.", who: "Agent" },
@@ -81,10 +85,20 @@ const PARCOURS = [
     </div>
   </section>
 
-  <section class="flip">
+  <section class="alt">
     <div class="wrap">
-      <div class="sec-head reveal"><span class="eyebrow">Nos engagements</span><h2>Ce que vous pouvez attendre de nous.</h2></div>
+      <div class="sec-head"><span class="kicker">Nos engagements</span><h2>Ce que vous pouvez attendre de nous</h2></div>
       <Engagements />
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="row-head">
+        <div class="sec-head"><span class="kicker">Où s’installer</span><h2>Les villes les plus demandées par les francophones</h2><p class="lead">Pas encore de ville en tête ? Le questionnaire « Trouver ma ville » vous oriente en quelques minutes.</p></div>
+        <a class="btn btn-ghost" href="/villes">Toutes les villes</a>
+      </div>
+      <div class="city-grid three">{franco.map((c) => <CityCard city={c} />)}</div>
     </div>
   </section>
 
@@ -92,11 +106,12 @@ const PARCOURS = [
 
   <section>
     <div class="wrap narrow">
-      <div class="sec-head reveal"><span class="eyebrow">Questions fréquentes</span><h2>Ce que les olim nous demandent.</h2></div>
+      <div class="sec-head"><span class="kicker">Questions fréquentes</span><h2>Ce que les olim nous demandent</h2></div>
       <div class="faq">
         {FAQ.map(([q, a]) => <details><summary>{q}</summary><p>{a}</p></details>)}
       </div>
     </div>
   </section>
-  <FormSection eyebrow="Trouver ma ville" title="Commencez par le questionnaire." lead="Quelques minutes pour découvrir les villes qui vous correspondent, puis un conseiller vous recontacte sur WhatsApp." goal="olim" />
+  <FormSection eyebrow="Trouver ma ville" title="Commencez par le questionnaire" lead="Quelques minutes pour découvrir les villes qui vous correspondent, puis un conseiller vous recontacte sur WhatsApp." goal="olim" />
+  <Related exclude="/alyah" />
 </Base>

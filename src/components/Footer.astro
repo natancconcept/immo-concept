@@ -1,19 +1,39 @@
 ---
-import { SITE, phoneDisplay, waLink } from "../data/site";
+import { SITE, logoMark, phoneDisplay, waLink } from "../data/site";
 import { CITIES } from "../data/cities";
-import { questionnaireLink } from "../data/questionnaire";
-import { PUBLIC_GALLERY } from "../data/gallery";
+import { SERVICES, TOOLS, AGENCY } from "../data/nav";
 ---
 <footer>
-  <div class="wrap foot">
-    <div>
-      <b style="color:var(--ink)">{SITE.name}</b> {SITE.provisional && <span class="ph">nom provisoire</span>}<br>
-      Immobilier, investissement et rénovation en Israël depuis {SITE.years} ans.<br>
-      WhatsApp : <a href={waLink()} target="_blank" rel="noopener" style="color:inherit">{phoneDisplay()}</a> {SITE.provisional && <span class="ph">numéro provisoire</span>}<br>
-      E‑mail : <a href={`mailto:${SITE.email}`} style="color:inherit">{SITE.email}</a>
+  <div class="wrap">
+    <div class="foot">
+      <div class="foot-brand">
+        <a class="logo" href="/"><span class="logo-mark" aria-hidden="true">{logoMark}</span><span class="logo-text"><b>{SITE.name}</b><small>Immobilier francophone en Israël</small></span></a>
+        <p>Achat, location, investissement et rénovation en Israël, avec nos avocats, architectes et artisans. Depuis {SITE.years} ans, en français.</p>
+        <div class="foot-contact">
+          <a href={waLink()} target="_blank" rel="noopener">WhatsApp : {phoneDisplay()}</a>
+          <a href={`mailto:${SITE.email}`}>{SITE.email}</a>
+          {SITE.provisional && <span><span class="ph">coordonnées provisoires</span></span>}
+        </div>
+      </div>
+      <div class="foot-col">
+        <h4>Services</h4>
+        {SERVICES.map((s) => <a href={s.href}>{s.title}</a>)}
+        <h4 style="margin-top:18px">Outils</h4>
+        {TOOLS.map((s) => <a href={s.href}>{s.title}</a>)}
+      </div>
+      <div class="foot-col">
+        <h4>L’agence</h4>
+        {AGENCY.map((s) => <a href={s.href}>{s.title}</a>)}
+        <a href="/mentions-legales">Mentions légales</a>
+      </div>
+      <div class="foot-col">
+        <h4>Villes</h4>
+        <div class="foot-cities">{CITIES.map((c) => <a href={`/villes/${c.id}`}>{c.name}</a>)}</div>
+      </div>
     </div>
-    <div class="foot-col"><b>Nos services</b><a href="/alyah">Alyah</a><a href="/investissement">Investissement locatif</a><a href="/coup-de-fusil">Coup de fusil</a><a href={questionnaireLink("olim")}>Trouver ma ville</a><a href="/simulateur">Simulateur</a>{PUBLIC_GALLERY.length > 0 && <a href="/realisations">Réalisations</a>}</div>
-    <div class="foot-col"><b>Villes</b><div class="foot-cities">{CITIES.map((c) => <a href={`/villes/${c.id}`}>{c.name}</a>)}</div></div>
+    <div class="foot-legal">
+      <span>© {new Date().getFullYear()} {SITE.name}. Chiffres indicatifs, sans valeur d’offre.</span>
+      <span>Photos d’illustration : Unsplash · <a href="/mentions-legales">Mentions légales</a></span>
+    </div>
   </div>
-  <div class="wrap foot-legal">© {new Date().getFullYear()} {SITE.name} · Chiffres indicatifs, sans valeur d’offre · Photos d’illustration : Unsplash</div>
 </footer>

@@ -9,11 +9,16 @@ Site vitrine construit avec [Astro](https://astro.build) à partir de la maquett
 | `/` | Accueil |
 | `/alyah` | Acheter ou louer pour son alyah, parcours, FAQ, questionnaire |
 | `/investissement` | Investissement locatif, simulateur de rendement, formulaire |
-| `/coup-de-fusil` | Achat‑rénovation‑revente, simulateur de plus‑value, avant/après, formulaire |
+| `/renovation-revente` | Achat, rénovation et revente (« coup de fusil »), simulateur de plus‑value, avant/après, formulaire. L’ancienne adresse `/coup-de-fusil` y redirige |
 | `/villes` et `/villes/<ville>` | Les 14 villes, une page par ville (ex. `/villes/netanya`) |
 | `/realisations` | Galerie filtrable : avant/après, ventes, témoignages, vidéos |
 | `/simulateur` | Simulateur complet. Accepte `?ville=haifa&mode=invest` |
-| `/trouver-ma-ville` | Le questionnaire. `?projet=alyah`, `investissement` ou `coup-de-fusil` ouvre directement le bon parcours |
+| `/trouver-ma-ville` | Le questionnaire. `?projet=alyah`, `investissement` ou `renovation-revente` ouvre directement le bon parcours |
+| `/agence` | Qui sommes‑nous : l’équipe, la méthode, les engagements, les villes |
+| `/contact` | WhatsApp, e‑mail et formulaire (le message s’ouvre dans WhatsApp) |
+| `/mentions-legales` | Mentions légales (à compléter dans `site.ts`) |
+
+Toutes les pages sont reliées entre elles : menu déroulant (Services, Villes, Outils, L’agence), menu complet sur téléphone, bloc « À voir aussi » en bas des pages, et plan du site dans le pied de page.
 
 Le site génère aussi `sitemap-index.xml`, `robots.txt`, un titre, une meta description et des balises Open Graph pour chaque page.
 
@@ -41,7 +46,8 @@ Pour tester le conseil de l’IA en local, copiez `.env.example` en `.env` et re
 
 | Pour changer… | Fichier |
 |---|---|
-| **Nom de la société, numéro WhatsApp, e‑mail**, adresse du site, années d’expérience | `src/data/site.ts` (le seul endroit où ils figurent) |
+| **Nom de la société, numéro WhatsApp, e‑mail**, adresse du site, années d’expérience, mentions légales | `src/data/site.ts` (le seul endroit où ils figurent) |
+| Menu, pied de page et liens « À voir aussi » (titres et descriptions des services et outils) | `src/data/nav.ts` |
 | Les villes : prix, loyers, notes, quartiers, hôpitaux, présentation | `src/data/cities.ts` |
 | Les villes mises en avant sur l’accueil | `HOME_CITIES` dans `src/data/cities.ts` |
 | Hypothèses du simulateur (taux, durée du prêt, coût des travaux…) | bas de `src/data/cities.ts` |
@@ -52,7 +58,7 @@ Pour tester le conseil de l’IA en local, copiez `.env.example` en `.env` et re
 | Calcul de compatibilité des villes et prompt de l’IA | `src/lib/recommend.ts` |
 | Textes d’une page | `src/pages/<page>.astro` (ex. `src/pages/alyah.astro`) |
 | En‑tête, pied de page, bouton WhatsApp flottant | `src/components/Header.astro`, `Footer.astro`, `WhatsAppFloat.astro` |
-| Couleurs, polices, espacements | `src/styles/global.css` (variables en haut du fichier) |
+| Couleurs, polices, espacements | `src/styles/global.css` (variables en haut du fichier). Titres en Frank Ruhl Libre, texte en Figtree |
 | Image de partage (WhatsApp, Facebook…) | `public/og.png` (1200 × 630 px) |
 | Photo de chaque ville | champ `photo` de la ville dans `src/data/cities.ts` |
 | Icône de l’onglet | `public/favicon.svg` |
@@ -62,7 +68,8 @@ Pour tester le conseil de l’IA en local, copiez `.env.example` en `.env` et re
 Dans `src/data/site.ts` :
 
 1. remplacez `name`, `whatsapp` (chiffres seulement, avec l’indicatif : `9725…`), `email` et `url` ;
-2. passez `provisional` à `false` : les étiquettes « nom provisoire » et « numéro provisoire » disparaissent.
+2. passez `provisional` à `false` : les étiquettes « coordonnées provisoires » disparaissent ;
+3. remplissez `legal` (raison sociale, adresse, numéro d’enregistrement, licence d’agent immobilier, responsable de la publication) : ils s’affichent sur la page Mentions légales.
 
 Les initiales du logo sont tirées du nom automatiquement.
 
@@ -87,7 +94,7 @@ Les réalisations et témoignages de la maquette sont des **exemples** (`demo: t
 
 - la page Réalisations affiche « Nos réalisations arrivent ici » et disparaît du menu ;
 - la section « Ce que disent nos clients » ne s’affiche pas ;
-- la page Coup de fusil montre un avant/après avec des photos d’illustration, présentées comme telles.
+- la page Rénovation & revente montre un avant/après avec des photos d’illustration, présentées comme telles.
 
 Pour publier du **vrai** contenu :
 

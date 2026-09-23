@@ -1,24 +1,26 @@
 ---
 import Base from "../../layouts/Base.astro";
 import PageHero from "../../components/PageHero.astro";
-import CtaBand from "../../components/CtaBand.astro";
+import ContactBand from "../../components/ContactBand.astro";
+import Related from "../../components/Related.astro";
 import CityCard from "../../components/CityCard.astro";
 import { CITIES, REGIONS } from "../../data/cities";
 import { questionnaireLink } from "../../data/questionnaire";
 ---
 <Base title="Nos villes en Israël" description="Jérusalem, Tel Aviv, Netanya, Ashdod, Haïfa, Ra’anana et plus : prix, loyers, vie sur place et quartiers recherchés dans les villes où nous accompagnons les francophones.">
-  <PageHero photo="promenade-tel-aviv" photoAlt="Promenade bordée de palmiers au bord de la mer" crumbs={[{ label: "Villes" }]}
+  <PageHero photo="promenade-tel-aviv" photoAlt="Promenade bordée de palmiers au bord de la mer" eyebrow="Nos villes" crumbs={[{ label: "Villes" }]}
     title="Où vivre en Israël ?"
     lead="Nous travaillons dans tout le pays, avec une priorité pour les grandes villes. Chaque fiche donne les prix, la vie sur place et les quartiers les plus demandés.">
     <a class="btn btn-primary btn-lg" href={questionnaireLink("olim")}>Laquelle est faite pour moi ?</a>
   </PageHero>
   <section>
     <div class="wrap">
-      {REGIONS.map((r) => <>
-        <h2 class="region-h">{r}</h2>
-        <div class="city-grid">{CITIES.filter((c) => c.region === r).map((c) => <CityCard city={c} />)}</div>
-      </>)}
+      {REGIONS.map((r) => <div class="region-block">
+        <h2 class="region-h">{r === "Jérusalem" ? "Région de Jérusalem" : r === "Sharon" ? "Sharon" : r}</h2>
+        <div class="city-grid three">{CITIES.filter((c) => c.region === r).map((c) => <CityCard city={c} />)}</div>
+      </div>)}
     </div>
   </section>
-  <CtaBand />
+  <Related />
+  <ContactBand />
 </Base>

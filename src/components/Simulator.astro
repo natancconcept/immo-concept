@@ -6,7 +6,7 @@ import { waLink } from "../data/site";
 export type SimMode = "achat" | "location" | "invest" | "flip";
 interface Props { mode?: SimMode; city?: string }
 const { mode = "achat", city = "netanya" } = Astro.props;
-const MODES: [SimMode, string][] = [["achat", "Acheter"], ["location", "Louer"], ["invest", "Investir"], ["flip", "Coup de fusil"]];
+const MODES: [SimMode, string][] = [["achat", "Acheter"], ["location", "Louer"], ["invest", "Investir"], ["flip", "Rénover & revendre"]];
 ---
 <div class="sim" id="simBlock" data-mode={mode} data-city={city}>
   <div class="card">

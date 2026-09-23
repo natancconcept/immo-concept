@@ -10,10 +10,10 @@ const { photo, photoAlt, eyebrow, he, title, lead, crumbs } = Astro.props;
   <div class="phero-shade"></div>
   <div class="wrap phero-in">
     <Crumbs items={crumbs} />
-    {he && <span class="he phero-he" lang="he">{he}</span>}
-    {eyebrow && <span class="eyebrow on-photo">{eyebrow}</span>}
+    {eyebrow && <span class="kicker">{eyebrow}</span>}
     <h1>{title}</h1>
     {lead && <p class="phero-lead">{lead}</p>}
+    {he && <span class="he phero-he" lang="he">{he}</span>}
     <div class="cta"><slot /></div>
   </div>
 </section>
