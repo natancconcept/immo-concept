@@ -2,8 +2,8 @@
 /* Bandeau photo en haut des pages intérieures. */
 import Photo from "./Photo.astro";
 import Crumbs from "./Crumbs.astro";
-interface Props { photo: string; photoAlt: string; eyebrow?: string; he?: string; title: string; lead?: string; crumbs: { label: string; href?: string }[] }
-const { photo, photoAlt, eyebrow, he, title, lead, crumbs } = Astro.props;
+interface Props { photo: string; photoAlt: string; eyebrow?: string; title: string; lead?: string; crumbs: { label: string; href?: string }[] }
+const { photo, photoAlt, eyebrow, title, lead, crumbs } = Astro.props;
 ---
 <section class="phero">
   <Photo src={photo} alt={photoAlt} class="phero-img" sizes="100vw" widths={[640, 1024, 1600]} eager />
@@ -13,7 +13,6 @@ const { photo, photoAlt, eyebrow, he, title, lead, crumbs } = Astro.props;
     {eyebrow && <span class="kicker">{eyebrow}</span>}
     <h1>{title}</h1>
     {lead && <p class="phero-lead">{lead}</p>}
-    {he && <span class="he phero-he" lang="he">{he}</span>}
     <div class="cta"><slot /></div>
   </div>
 </section>

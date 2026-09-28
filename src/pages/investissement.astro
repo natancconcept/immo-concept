@@ -14,7 +14,7 @@ const byYield = [...CITIES].sort((a, b) => b.rent / b.m2 - a.rent / a.m2).slice(
 const yieldOf = (c: (typeof CITIES)[number]) => (c.rent * 12 / c.m2 * 100).toFixed(1).replace(".", ",");
 ---
 <Base title="Investir dans l’immobilier en Israël" description="Investir dans l’immobilier en Israël : acheter pour louer, ou acheter un bien à rénover pour le revendre (« coup de fusil »). Étude chiffrée, avocat, travaux, gestion. Simulateur par ville.">
-  <PageHero photo="interieur-blanc" photoAlt="Appartement blanc et lumineux" he="השקעה" eyebrow="Investissement" crumbs={[{ label: "Investissement" }]}
+  <PageHero photo="interieur-blanc" photoAlt="Appartement blanc et lumineux" eyebrow="Investissement" crumbs={[{ label: "Investissement" }]}
     title="Investir dans l’immobilier en Israël"
     lead="Deux stratégies : acheter pour louer et toucher un loyer, ou acheter un bien à rénover pour le revendre avec une plus‑value. Dans les deux cas, vous avez les chiffres par écrit avant de décider.">
     <a class="btn btn-primary btn-lg" href="#formulaire">Décrire mon projet</a>

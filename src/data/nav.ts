@@ -3,14 +3,14 @@
 import { questionnaireLink } from "./questionnaire";
 import { PUBLIC_GALLERY } from "./gallery";
 
-export interface NavLink { href: string; title: string; desc?: string; he?: string; photo?: string; photoAlt?: string }
+export interface NavLink { href: string; title: string; desc?: string; photo?: string; photoAlt?: string }
 
 export const SERVICES: NavLink[] = [
-  { href: "/alyah", title: "Achat & location", he: "עלייה", photo: "interieur-soleil", photoAlt: "Salon lumineux",
+  { href: "/alyah", title: "Achat & location", photo: "interieur-soleil", photoAlt: "Salon lumineux",
     desc: "Pour y vivre : trouver, vérifier et acheter (ou louer) votre logement, que vous soyez en France ou déjà en Israël." },
-  { href: "/investissement", title: "Investissement", he: "השקעה", photo: "interieur-blanc", photoAlt: "Appartement blanc et lumineux",
+  { href: "/investissement", title: "Investissement", photo: "interieur-blanc", photoAlt: "Appartement blanc et lumineux",
     desc: "Pour que ça rapporte : acheter pour louer, ou acheter un bien à rénover pour le revendre avec une plus‑value." },
-  { href: "/gestion", title: "Gestion de votre bien", he: "ניהול נכס", photo: "cles", photoAlt: "Remise des clés d’un appartement",
+  { href: "/gestion", title: "Gestion de votre bien", photo: "cles", photoAlt: "Remise des clés d’un appartement",
     desc: "Vous avez un bien en Israël : nous le rénovons, trouvons les locataires, le gérons au quotidien ou le revendons." },
 ];
 

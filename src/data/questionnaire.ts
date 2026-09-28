@@ -18,11 +18,11 @@ export interface Question {
   show?: (a: Answers) => boolean;
 }
 export interface Page { title: string; q: Question[] }
-export interface Goal { he: string; label: string; sub: string; slug: string; pages: Page[] }
+export interface Goal { label: string; sub: string; slug: string; pages: Page[] }
 export type GoalId = "olim" | "invest" | "gestion";
 
 export const GOALS: Record<GoalId, Goal> = {
-  olim: { he: "עלייה", label: "Je m’installe en Israël", sub: "Achat ou location, avec le choix de la ville", slug: "alyah", pages: [
+  olim: { label: "Je m’installe en Israël", sub: "Achat ou location, avec le choix de la ville", slug: "alyah", pages: [
     { title: "Votre foyer", q: [
       { id: "family", label: "Situation", type: "chips", req: true, opts: ["Seul(e)", "En couple", "Famille avec enfants", "Parent seul avec enfants"] },
       { id: "kids", label: "Âge des enfants (plusieurs choix possibles)", type: "multi", opts: ["Pas d’enfants", "Moins de 6 ans", "6 à 12 ans", "13 à 18 ans", "Plus de 18 ans"], show: (a) => /enfants/.test(String(a.family || "")) },
@@ -49,7 +49,7 @@ export const GOALS: Record<GoalId, Goal> = {
       { id: "extras", label: "Indispensable pour vous (plusieurs choix possibles)", type: "multi", opts: ["Ascenseur", "Mamad (pièce sécurisée)", "Parking", "Synagogue à pied", "Près de la plage", "Écoles à proximité"] },
     ]},
   ]},
-  invest: { he: "השקעה", label: "J’investis", sub: "Acheter pour louer, ou rénover pour revendre", slug: "investissement", pages: [
+  invest: { label: "J’investis", sub: "Acheter pour louer, ou rénover pour revendre", slug: "investissement", pages: [
     { title: "Votre investissement", q: [
       { id: "type", label: "Votre stratégie", type: "chips", req: true, opts: ["Acheter pour louer", "Acheter, rénover et revendre", "Je ne sais pas encore"] },
       { id: "goal", label: "Votre priorité", type: "chips", req: true, opts: ["Rendement", "Plus‑value", "Équilibre"] },
@@ -61,7 +61,7 @@ export const GOALS: Record<GoalId, Goal> = {
       { id: "horizon", label: "Horizon souhaité", type: "chips", opts: ["Moins de 12 mois", "12 à 24 mois", "Long terme"] },
     ]},
   ]},
-  gestion: { he: "ניהול נכס", label: "J’ai un bien à faire gérer", sub: "Rénovation, location, gestion ou revente de votre bien", slug: "gestion", pages: [
+  gestion: { label: "J’ai un bien à faire gérer", sub: "Rénovation, location, gestion ou revente de votre bien", slug: "gestion", pages: [
     { title: "Votre besoin", q: [
       { id: "situation", label: "Votre situation", type: "chips", req: true, opts: ["Je possède déjà un bien", "Je vais acheter un bien", "Bien hérité ou en indivision"] },
       { id: "services", label: "Ce que vous attendez de nous (plusieurs choix possibles)", type: "multi", req: true, opts: ["Rénovation et travaux", "Trouver des locataires", "Gestion au quotidien", "Revente", "Plans et aménagement"] },

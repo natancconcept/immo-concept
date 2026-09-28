@@ -515,9 +515,9 @@ footer .ph{background:#2A4462;color:#D5E1EE}
 .related-sec{padding-block:64px}
 .related-sec .sec-head{margin-bottom:28px}
 @media (max-width:700px){.related-sec{padding-block:48px}}
-.choice .he{white-space:nowrap;width:84px;flex-basis:84px;font-size:20px}
 .choice b{color:var(--ink)}
-@media (max-width:480px){.choice .he{width:64px;flex-basis:64px;font-size:17px}}
+.choice{justify-content:space-between;padding:18px 20px}
+.choice::after{content:"›";font-size:26px;line-height:1;color:var(--ink-soft)}
 .phero-he{display:inline-block;margin-top:14px}
 .form-grid > .sec-head{position:sticky;top:96px;margin-bottom:0}
 .form-points{margin-top:12px;font-size:15.5px}

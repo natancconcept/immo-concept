@@ -67,7 +67,7 @@ const { goal, readQuery = false } = Astro.props;
       let h = "";
       if (s === 0) {
         h = `<h3 style="margin-bottom:14px">Quel est votre projet ?</h3><div class="choices">` +
-          (Object.entries(GOALS) as [GoalId, (typeof GOALS)[GoalId]][]).map(([k, g]) => `<button type="button" class="choice" data-goal="${k}" aria-pressed="${state.goal === k}"><span class="he" lang="he">${g.he}</span><span><b>${g.label}</b><span>${g.sub}</span></span></button>`).join("") + `</div>`;
+          (Object.entries(GOALS) as [GoalId, (typeof GOALS)[GoalId]][]).map(([k, g]) => `<button type="button" class="choice" data-goal="${k}" aria-pressed="${state.goal === k}"><span><b>${g.label}</b><span>${g.sub}</span></span></button>`).join("") + `</div>`;
       } else if (s <= P.length) {
         const pg = P[s - 1];
         h = `<p class="kicker">${GOALS[state.goal!].label} · étape ${s} sur ${P.length}</p><h3 style="margin-bottom:16px">${pg.title}</h3>` +

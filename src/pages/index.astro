@@ -47,7 +47,6 @@ const POINTS: Record<string, string[]> = {
           <a class="service" href={s.href}>
             <Photo src={s.photo!} alt={s.photoAlt!} sizes="(max-width: 900px) 100vw, 33vw" widths={[480, 800]} />
             <div class="service-body">
-              <span class="he" lang="he">{s.he}</span>
               <h3>{s.title}</h3>
               <p>{s.desc}</p>
               <ul>{POINTS[s.href].map((p) => <li>{p}</li>)}</ul>
