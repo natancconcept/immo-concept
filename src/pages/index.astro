@@ -10,7 +10,7 @@ import { CITIES, HOME_CITIES } from "../data/cities";
 import { SERVICES, TOOLS } from "../data/nav";
 const home = HOME_CITIES.map((id) => CITIES.find((c) => c.id === id)).filter((c) => !!c);
 const POINTS: Record<string, string[]> = {
-  "/alyah": ["Choix de la ville et du quartier", "Visites sur place ou en vidéo", "Vérification juridique et financement"],
+  "/alyah": ["Choix de la ville et du quartier", "Visites sur place ou en vidéo", "Avocat, banque et meilleur taux de prêt"],
   "/investissement": ["Étude de rentabilité avant l’achat", "Location ou rénovation‑revente", "Choix des villes selon le rendement"],
   "/gestion": ["Travaux et rénovation par nos artisans", "Recherche de locataires et bail", "Gestion au quotidien ou revente"],
 };
@@ -30,7 +30,7 @@ const POINTS: Record<string, string[]> = {
       <div class="hero-facts">
         <span><b>{SITE.years} ans</b> d’expérience en Israël</span>
         <span><b>{CITIES.length} villes</b> suivies</span>
-        <span><b>Avocat</b> dans chaque dossier</span>
+        <span><b>Tout compris</b> : avocat, banque, taxes, travaux</span>
       </div>
     </div>
   </section>
@@ -70,7 +70,7 @@ const POINTS: Record<string, string[]> = {
       <div class="facts">
         <div><b>{SITE.years} ans</b><span>d’accompagnement en Israël</span></div>
         <div><b>{CITIES.length}</b><span>villes suivies, surtout les grandes</span></div>
-        <div><b>Avocats</b><span>intégrés à chaque dossier</span></div>
+        <div><b>Tout compris</b><span>avocat, banque, taxes et signature</span></div>
         <div><b>Artisans</b><span>de tous corps de métier</span></div>
       </div>
     </div>
@@ -86,7 +86,7 @@ const POINTS: Record<string, string[]> = {
         <li><b>Votre projet</b><span>Un premier échange, ou le questionnaire en ligne, pour comprendre votre famille, votre budget et vos priorités.</span></li>
         <li><b>La sélection</b><span>Des biens choisis pour vous, visités sur place ou en vidéo, avec notre avis sur chacun.</span></li>
         <li><b>Les vérifications</b><span>Notre avocat contrôle le Tabou, les permis, les dettes éventuelles et le contrat avant toute offre.</span></li>
-        <li><b>Les clés</b><span>Financement, signature, enregistrement, et si besoin des travaux réalisés par nos artisans.</span></li>
+        <li><b>Le prêt et les clés</b><span>Meilleur taux négocié avec les banques, rendez‑vous à la banque avec vous, signature, enregistrement et, si besoin, travaux.</span></li>
       </ol>
     </div>
   </section>
@@ -123,7 +123,8 @@ const POINTS: Record<string, string[]> = {
     <div class="wrap">
       <div class="sec-head">
         <span class="kicker">Pourquoi nous</span>
-        <h2>Nos engagements</h2>
+        <h2>Tout compris, de la recherche aux clés</h2>
+        <p class="lead">Acheter ou vendre en Israël demande un avocat, une banque, des calculs de taxes, des signatures. Nous nous occupons de tout, et vous accompagnons à chaque rendez‑vous.</p>
       </div>
       <Engagements />
     </div>

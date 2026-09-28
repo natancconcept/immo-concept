@@ -522,3 +522,24 @@ footer .ph{background:#2A4462;color:#D5E1EE}
 .form-grid > .sec-head{position:sticky;top:96px;margin-bottom:0}
 .form-points{margin-top:12px;font-size:15.5px}
 @media (max-width:900px){.form-grid > .sec-head{position:static}}
+
+/* ---------- « Pourquoi nous » : tout compris ---------- */
+.allin{display:grid;grid-template-columns:1.15fr 1fr;gap:24px;align-items:stretch}
+.allin-col{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:28px 30px;display:flex;flex-direction:column}
+.allin-head{margin-bottom:18px}
+.allin-head h3{font-size:22px;margin-top:4px}
+.allin-list{list-style:none;padding:0;margin:0;counter-reset:a}
+.allin-list li{counter-increment:a;display:grid;grid-template-columns:34px 1fr;column-gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.allin-list li::before{content:counter(a);grid-row:span 2;width:28px;height:28px;border-radius:50%;background:var(--bg-3);color:var(--azure-deep);display:grid;place-items:center;font-weight:700;font-size:13.5px;margin-top:1px}
+.allin-list b{font-size:16px}
+.allin-list span{font-size:15px;color:var(--ink-soft)}
+.allin-cta{margin-top:auto;padding:20px;border-radius:var(--r-sm);background:var(--bg-3);display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.allin-cta b{font:700 18px var(--serif)}
+.allin-cta span{font-size:15px;color:var(--ink-soft);margin-bottom:8px}
+.allin-cta small{font-size:13.5px;color:var(--ink-soft);margin-top:8px}
+.allin-col .allin-list{margin-bottom:22px}
+.promises{display:grid;grid-template-columns:repeat(4,1fr);gap:28px;margin-top:40px;padding-top:32px;border-top:1px solid var(--line)}
+.promises h3{font-size:18px;margin-bottom:6px}
+.promises p{font-size:15px;color:var(--ink-soft)}
+@media (max-width:900px){.allin{grid-template-columns:1fr}.promises{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.allin-col{padding:22px 18px}.promises{grid-template-columns:1fr;gap:20px}}
