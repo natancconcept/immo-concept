@@ -3,26 +3,54 @@ import Base from "../layouts/Base.astro";
 import Crumbs from "../components/Crumbs.astro";
 import Questionnaire from "../components/Questionnaire.astro";
 import Photo from "../components/Photo.astro";
+import Related from "../components/Related.astro";
+import { CITIES } from "../data/cities";
 ---
 <Base title="Trouver ma ville en Israël" description="Famille, pratique religieuse, travail, santé, communauté francophone et budget : répondez au questionnaire et découvrez les villes d’Israël qui vous correspondent.">
-  <section class="form-sec tall">
-    <div class="wrap form-grid">
-      <div class="sec-head">
-        <Crumbs items={[{ label: "Trouver ma ville" }]} />
-        <h1 style="font-size:clamp(32px,4vw,46px)">Trouver ma ville en Israël</h1>
-        <p class="lead">Pour une alyah, le questionnaire tient compte de votre famille, de votre pratique religieuse, de votre métier, de votre santé, de la communauté francophone et de votre budget. Vous obtenez tout de suite les villes qui vous correspondent le mieux, puis un conseiller vous recontacte sur WhatsApp.</p>
-        <ul class="asks">
-          <li>Famille, enfants et âge</li>
-          <li>Pratique religieuse et communauté francophone</li>
-          <li>Profession, lieu de travail et besoins de santé</li>
-          <li>Budget, type de logement, neuf ou ancien</li>
-        </ul>
-        <div class="tmv-photo">
-          <Photo src="promenade-tel-aviv" alt="Promenade bordée de palmiers au bord de la mer" sizes="(max-width: 900px) 100vw, 40vw" widths={[480, 800]} />
-          
-        </div>
-      </div>
-      <Questionnaire readQuery />
+  <section class="tmv-head">
+    <div class="wrap">
+      <Crumbs items={[{ label: "Outils" }, { label: "Trouver ma ville" }]} />
+      <span class="kicker">Outil gratuit</span>
+      <h1>Trouver ma ville en Israël</h1>
+      <p class="lead">Répondez à quelques questions sur votre famille, votre pratique, votre travail et votre budget. Nous comparons vos réponses aux {CITIES.length} villes que nous suivons et vous indiquons celles qui vous correspondent le mieux, avec les raisons.</p>
+      <ul class="tmv-facts">
+        <li>Gratuit</li>
+        <li>Environ 3 minutes</li>
+        <li>Sans inscription</li>
+      </ul>
     </div>
   </section>
+
+  <section class="tmv-body">
+    <div class="wrap tmv-grid">
+      <div class="tmv-main">
+        <Questionnaire readQuery />
+      </div>
+      <aside class="tmv-side" aria-label="À propos du questionnaire">
+        <div class="tmv-photo">
+          <Photo src="promenade-tel-aviv" alt="Promenade bordée de palmiers au bord de la mer" sizes="340px" widths={[400, 700]} />
+        </div>
+        <div class="tmv-box">
+          <h2>Ce que nous prenons en compte</h2>
+          <ul class="ticks">
+            <li>Votre famille, l’âge des enfants et le vôtre</li>
+            <li>Votre pratique religieuse et la communauté francophone</li>
+            <li>Votre métier, votre lieu de travail et vos besoins de santé</li>
+            <li>Votre budget, le type de logement, neuf ou ancien</li>
+          </ul>
+        </div>
+        <div class="tmv-box">
+          <h2>Et ensuite ?</h2>
+          <ol class="tmv-next">
+            <li><b>Votre sélection de villes</b><span>Affichée tout de suite, avec un score et les raisons.</span></li>
+            <li><b>Un conseiller vous répond</b><span>Envoyez‑nous le résumé sur WhatsApp, en un clic.</span></li>
+            <li><b>Les visites</b><span>Sur place ou en vidéo, dans les villes retenues.</span></li>
+          </ol>
+        </div>
+        <p class="tmv-note">Vos réponses restent sur votre appareil, sauf si vous nous les envoyez ou demandez le conseil rédigé par l’IA.</p>
+      </aside>
+    </div>
+  </section>
+
+  <Related exclude="/trouver-ma-ville" title="Pour aller plus loin" />
 </Base>

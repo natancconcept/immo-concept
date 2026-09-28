@@ -487,3 +487,26 @@ footer .ph{background:#2A4462;color:#D5E1EE}
 @media (max-width:560px){.foot{grid-template-columns:1fr}}
 .float-wa{position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:30;width:56px;height:56px;border-radius:50%;background:var(--wa);display:grid;place-items:center;box-shadow:0 8px 20px -6px rgba(0,0,0,.4);color:#fff}
 .float-wa svg{width:28px;height:28px}
+
+/* ---------- page « Trouver ma ville » ---------- */
+.tmv-head{background:var(--bg-3);padding-block:40px 36px;border-bottom:1px solid var(--line)}
+.tmv-head h1{font-size:clamp(32px,4vw,46px);margin:8px 0 12px}
+.tmv-head .lead{font-size:17px}
+.tmv-facts{list-style:none;padding:0;margin:18px 0 0;display:flex;flex-wrap:wrap;gap:8px}
+.tmv-facts li{font-size:14px;font-weight:600;background:#fff;border:1px solid var(--line);padding:6px 12px;border-radius:6px}
+.tmv-body{padding-block:40px 88px}
+.tmv-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:40px;align-items:start}
+.tmv-main .form-card{box-shadow:none}
+.tmv-side{position:sticky;top:96px;display:flex;flex-direction:column;gap:16px}
+.tmv-photo img{display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:cover;border-radius:var(--r)}
+.tmv-box{border:1px solid var(--line);border-radius:var(--r);padding:20px 22px;background:#fff}
+.tmv-box h2{font-size:19px;margin-bottom:12px}
+.tmv-box .ticks{font-size:15px}
+.tmv-next{list-style:none;padding:0;margin:0;counter-reset:n;display:flex;flex-direction:column;gap:12px}
+.tmv-next li{counter-increment:n;display:grid;grid-template-columns:26px 1fr;column-gap:10px;font-size:14.5px}
+.tmv-next li::before{content:counter(n);grid-row:span 2;width:24px;height:24px;border-radius:50%;background:var(--bg-3);color:var(--azure-deep);display:grid;place-items:center;font-weight:700;font-size:13px}
+.tmv-next span{color:var(--ink-soft)}
+.tmv-note{font-size:13px;color:var(--ink-soft)}
+@media (max-width:1000px){.tmv-grid{grid-template-columns:1fr;gap:28px}.tmv-side{position:static}.tmv-photo{display:none}}
+@media (max-width:600px){.tmv-head{padding-block:28px 24px}.tmv-body{padding-block:20px 56px}.tmv-head .lead{font-size:16px}}
+@media (max-width:420px){.tmv-facts li{font-size:13px;padding:5px 9px}.tmv-facts{gap:6px}}
