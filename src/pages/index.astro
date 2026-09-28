@@ -2,55 +2,66 @@
 import Base from "../layouts/Base.astro";
 import CityCard from "../components/CityCard.astro";
 import Photo from "../components/Photo.astro";
+import Icon from "../components/Icon.astro";
 import Engagements from "../components/Engagements.astro";
 import Testimonials from "../components/Testimonials.astro";
 import ContactBand from "../components/ContactBand.astro";
-import { SITE } from "../data/site";
+import { SITE, waLink } from "../data/site";
 import { CITIES, HOME_CITIES } from "../data/cities";
 import { SERVICES, TOOLS } from "../data/nav";
+import { questionnaireLink } from "../data/questionnaire";
 const home = HOME_CITIES.map((id) => CITIES.find((c) => c.id === id)).filter((c) => !!c);
 const POINTS: Record<string, string[]> = {
   "/alyah": ["Choix de la ville et du quartier", "Visites sur place ou en vidéo", "Avocat, banque et meilleur taux de prêt"],
   "/investissement": ["Étude de rentabilité avant l’achat", "Location ou rénovation‑revente", "Choix des villes selon le rendement"],
   "/gestion": ["Travaux et rénovation par nos artisans", "Recherche de locataires et bail", "Gestion au quotidien ou revente"],
 };
+const PATHS = [
+  { href: "/alyah", label: "Acheter pour y vivre", icon: "home" },
+  { href: "/simulateur?mode=location", label: "Louer un logement", icon: "key" },
+  { href: "/investissement", label: "Investir", icon: "chart" },
+  { href: "/gestion", label: "Faire gérer mon bien", icon: "tools" },
+  { href: questionnaireLink("olim"), label: "Trouver ma ville", icon: "pin" },
+] as const;
 ---
-<Base title="Agence immobilière francophone en Israël" description={`Agence immobilière francophone en Israël : achat et location pour votre alyah, investissement, gestion et rénovation de votre bien. Avocats, architectes et artisans, depuis ${SITE.years} ans.`}>
+<Base title="L’agence immobilière des francophones en Israël" description={`Agence immobilière francophone en Israël : acheter ou louer pour votre alyah, investir, faire gérer votre bien. Avocat, banque, taxes et travaux compris, depuis ${SITE.years} ans.`}>
   <section class="hero">
     <Photo src={SITE.heroPhoto} alt="Tel Aviv et Jaffa vues du ciel, au bord de la Méditerranée" class="hero-img" sizes="100vw" widths={[640, 1024, 1600]} eager />
     <div class="hero-shade"></div>
     <div class="wrap hero-in">
-      <span class="kicker">Achat · Location · Investissement · Gestion</span>
-      <h1>Agence immobilière francophone en Israël</h1>
-      <p class="hero-lead">Nous accompagnons les francophones qui achètent, louent, investissent ou possèdent un bien en Israël : recherche du bien, vérifications par notre avocat, financement, travaux, location et gestion. Une seule équipe, en français, du premier échange à la remise des clés.</p>
-      <div class="cta">
-        <a class="btn btn-primary btn-lg" href="#services">Voir nos services</a>
-        <a class="btn btn-outline-light btn-lg" href="/contact">Parler à un conseiller</a>
-      </div>
-      <div class="hero-facts">
-        <span><b>{SITE.years} ans</b> d’expérience en Israël</span>
-        <span><b>{CITIES.length} villes</b> suivies</span>
-        <span><b>Tout compris</b> : avocat, banque, taxes, travaux</span>
-      </div>
+      <span class="hero-badge">Agence immobilière francophone · depuis {SITE.years} ans</span>
+      <h1>L’agence immobilière des francophones en Israël</h1>
+      <p class="hero-lead">Acheter, louer, investir ou faire gérer un bien : nous vous accompagnons en français, de la première question jusqu’aux clés. Avocat, banque, taxes et travaux compris.</p>
+      <p class="hero-ask">Que souhaitez‑vous faire ?</p>
+      <nav class="paths" aria-label="Accès rapide">
+        {PATHS.map((p) => <a href={p.href}><Icon name={p.icon} tone="blue" size="sm" />{p.label}</a>)}
+      </nav>
     </div>
+    <a class="hero-help" href={waLink("Bonjour, j’ai une question sur mon projet immobilier en Israël.")} target="_blank" rel="noopener">
+      <span class="hero-help-ic"><svg aria-hidden="true"><use href="#wa" /></svg></span>
+      <span><b>Une question ?</b><small>Un conseiller vous répond en français</small></span>
+    </a>
   </section>
 
   <section id="services">
     <div class="wrap">
       <div class="sec-head">
         <span class="kicker">Nos services</span>
-        <h2>Que souhaitez‑vous faire en Israël ?</h2>
-        <p class="lead">Y vivre, investir, ou faire gérer un bien que vous possédez : une même équipe pour les trois.</p>
+        <h2>Trois façons de vous accompagner</h2>
+        <p class="lead">Vous voulez y vivre, investir, ou vous avez déjà un bien : une même équipe s’occupe de tout.</p>
       </div>
       <div class="services">
         {SERVICES.map((s) => (
           <a class="service" href={s.href}>
-            <Photo src={s.photo!} alt={s.photoAlt!} sizes="(max-width: 900px) 100vw, 33vw" widths={[480, 800]} />
+            <div class="service-media">
+              <Photo src={s.photo!} alt={s.photoAlt!} sizes="(max-width: 900px) 100vw, 33vw" widths={[480, 800]} />
+              <Icon name={s.icon!} tone={s.tone} size="lg" />
+            </div>
             <div class="service-body">
               <h3>{s.title}</h3>
               <p>{s.desc}</p>
-              <ul>{POINTS[s.href].map((p) => <li>{p}</li>)}</ul>
-              <span class="link">En savoir plus</span>
+              <ul class="ticks">{POINTS[s.href].map((p) => <li>{p}</li>)}</ul>
+              <span class="link">Découvrir</span>
             </div>
           </a>
         ))}
@@ -59,47 +70,34 @@ const POINTS: Record<string, string[]> = {
   </section>
 
   <section class="alt">
-    <div class="wrap intro">
-      <div class="intro-text">
-        <span class="kicker">L’agence</span>
-        <h2 style="margin:12px 0 20px">Tous les métiers de l’immobilier, sous le même toit</h2>
-        <p>Acheter en Israël quand on vient de France, c’est une autre langue, d’autres règles et d’autres usages. Notre agence réunit des conseillers francophones, des avocats, un architecte et des artisans de tous corps de métier.</p>
-        <p>Vous avez un seul interlocuteur, qui coordonne tout le monde et vous tient informé sur WhatsApp, que vous soyez en France ou déjà installé.</p>
-        <a class="link" href="/agence">Découvrir l’agence</a>
+    <div class="wrap split">
+      <div class="photo-stack">
+        <Photo src="emmenagement" alt="Un couple emménage dans son nouvel appartement" sizes="(max-width: 900px) 100vw, 50vw" widths={[480, 800, 1100]} />
+        <div class="photo-note-card"><Icon name="heart" tone="rose" size="sm" /><span><b>Un seul interlocuteur</b><small>du premier appel à la remise des clés</small></span></div>
       </div>
-      <div class="facts">
-        <div><b>{SITE.years} ans</b><span>d’accompagnement en Israël</span></div>
-        <div><b>{CITIES.length}</b><span>villes suivies, surtout les grandes</span></div>
-        <div><b>Tout compris</b><span>avocat, banque, taxes et signature</span></div>
-        <div><b>Artisans</b><span>de tous corps de métier</span></div>
+      <div>
+        <span class="kicker">Comment ça se passe</span>
+        <h2 style="margin:10px 0 24px">Simple, du premier échange aux clés</h2>
+        <ol class="steps-v">
+          <li><Icon name="chat" tone="blue" /><div><b>On fait connaissance</b><span>Un appel ou le questionnaire en ligne : votre famille, votre budget, vos priorités.</span></div></li>
+          <li><Icon name="search" tone="mint" /><div><b>On cherche et on visite</b><span>Des biens choisis pour vous, visités sur place ou en vidéo, avec notre avis franc.</span></div></li>
+          <li><Icon name="bank" tone="sun" /><div><b>On sécurise tout</b><span>Avocat, banque et meilleur taux, taxes : tout est vérifié et chiffré avant de signer.</span></div></li>
+          <li><Icon name="key" tone="rose" /><div><b>Vous recevez les clés</b><span>Signature, compteurs à votre nom et, si besoin, travaux par nos artisans.</span></div></li>
+        </ol>
+        <a class="btn btn-primary btn-lg" href="/contact">Parler à un conseiller</a>
       </div>
     </div>
   </section>
 
   <section>
     <div class="wrap">
-      <div class="sec-head">
-        <span class="kicker">Notre méthode</span>
-        <h2>Comment se déroule un achat avec nous</h2>
-      </div>
-      <ol class="method">
-        <li><b>Votre projet</b><span>Un premier échange, ou le questionnaire en ligne, pour comprendre votre famille, votre budget et vos priorités.</span></li>
-        <li><b>La sélection</b><span>Des biens choisis pour vous, visités sur place ou en vidéo, avec notre avis sur chacun.</span></li>
-        <li><b>Les vérifications</b><span>Notre avocat contrôle le Tabou, les permis, les dettes éventuelles et le contrat avant toute offre.</span></li>
-        <li><b>Le prêt et les clés</b><span>Meilleur taux négocié avec les banques, rendez‑vous à la banque avec vous, signature, enregistrement et, si besoin, travaux.</span></li>
-      </ol>
-    </div>
-  </section>
-
-  <section class="alt">
-    <div class="wrap">
       <div class="row-head">
         <div class="sec-head">
           <span class="kicker">Nos villes</span>
-          <h2>Où vivre en Israël ?</h2>
-          <p class="lead">Prix, loyers, vie sur place et quartiers recherchés : une fiche détaillée pour chaque ville.</p>
+          <h2>Où aimeriez‑vous vivre ?</h2>
+          <p class="lead">Prix, loyers, vie sur place et quartiers recherchés : une fiche pour chaque ville.</p>
         </div>
-        <a class="btn btn-ghost" href="/villes">Les {CITIES.length} villes</a>
+        <a class="btn btn-ghost" href="/villes">Voir les {CITIES.length} villes</a>
       </div>
       <div class="city-grid three">
         {home.map((c) => <CityCard city={c} />)}
@@ -107,14 +105,19 @@ const POINTS: Record<string, string[]> = {
     </div>
   </section>
 
-  <section>
+  <section class="pale">
     <div class="wrap">
       <div class="sec-head">
         <span class="kicker">Outils gratuits</span>
-        <h2>Préparez votre projet en ligne</h2>
+        <h2>Préparez votre projet en quelques minutes</h2>
       </div>
       <div class="tools">
-        {TOOLS.map((t) => <a class="tool" href={t.href}><h3>{t.title}</h3><p>{t.desc}</p><span class="link">{t.href.startsWith("/simulateur") ? "Faire une simulation" : "Répondre au questionnaire"}</span></a>)}
+        {TOOLS.map((t) => (
+          <a class="tool" href={t.href}>
+            <Icon name={t.icon!} tone={t.tone} size="lg" />
+            <div><h3>{t.title}</h3><p>{t.desc}</p><span class="link">{t.href.startsWith("/simulateur") ? "Faire une simulation" : "Répondre au questionnaire"}</span></div>
+          </a>
+        ))}
       </div>
     </div>
   </section>

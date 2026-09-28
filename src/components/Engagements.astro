@@ -2,6 +2,7 @@
 /* « Pourquoi nous » : tout ce qui est inclus pour acheter ou vendre, puis nos engagements.
    Utilisé sur l'accueil, Alyah, L'agence et Réalisations. */
 import { SITE, waLink } from "../data/site";
+import Icon from "./Icon.astro";
 
 const BUY = [
   { t: "Recherche et visites", d: "Choix de la ville et du quartier, sélection des biens, visites sur place ou en vidéo." },
@@ -20,11 +21,11 @@ const SELL = [
   { t: "Signature et remise des clés", d: "Signature, transfert de l’arnona et des compteurs, remise des clés." },
 ];
 const PROMISES = [
-  { t: "Un interlocuteur, en français", d: "Un conseiller qui connaît votre dossier et coordonne tout le monde, joignable sur WhatsApp." },
-  { t: "Des visites en vidéo", d: "Encore à l’étranger ? Nous visitons pour vous, en direct, avec un avis franc." },
-  { t: "Les chiffres par écrit", d: "Prix, frais, taxes, mensualité : tout est chiffré avant la moindre décision." },
-  { t: `${SITE.years} ans sur le terrain`, d: "Nous connaissons les quartiers, les écoles, les banques et les prix réels." },
-];
+  { i: "chat", tone: "blue", t: "Un interlocuteur, en français", d: "Un conseiller qui connaît votre dossier et coordonne tout le monde, joignable sur WhatsApp." },
+  { i: "video", tone: "rose", t: "Des visites en vidéo", d: "Encore à l’étranger ? Nous visitons pour vous, en direct, avec un avis franc." },
+  { i: "doc", tone: "mint", t: "Les chiffres par écrit", d: "Prix, frais, taxes, mensualité : tout est chiffré avant la moindre décision." },
+  { i: "users", tone: "sun", t: `${SITE.years} ans sur le terrain`, d: "Nous connaissons les quartiers, les écoles, les banques et les prix réels." },
+] as const;
 ---
 <div class="allin">
   <div class="allin-col">
@@ -43,5 +44,5 @@ const PROMISES = [
   </div>
 </div>
 <div class="promises">
-  {PROMISES.map((p) => <div><h3>{p.t}</h3><p>{p.d}</p></div>)}
+  {PROMISES.map((p) => <div><Icon name={p.i} tone={p.tone} /><h3>{p.t}</h3><p>{p.d}</p></div>)}
 </div>

@@ -1,15 +1,22 @@
 ---
 /* Bandeau de contact en bas de page. */
 import { waLink } from "../data/site";
+import Photo from "./Photo.astro";
 interface Props { title?: string; text?: string; message?: string }
-const { title = "Un projet immobilier en Israël ?", text = "Parlez‑en à un conseiller francophone. Premier échange sans engagement, sur WhatsApp ou par e‑mail.", message = "Bonjour, je souhaite parler de mon projet immobilier en Israël." } = Astro.props;
+const { title = "Un projet immobilier en Israël ?", text = "Parlez‑en à un conseiller francophone. Le premier échange est gratuit et sans engagement.", message = "Bonjour, je souhaite parler de mon projet immobilier en Israël." } = Astro.props;
 ---
 <section class="contact-band">
-  <div class="wrap contact-band-in">
-    <div><h2>{title}</h2><p>{text}</p></div>
-    <div class="cta">
-      <a class="btn btn-wa btn-lg" href={waLink(message)} target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa" /></svg>Écrire sur WhatsApp</a>
-      <a class="btn btn-outline-light btn-lg" href="/contact">Autres moyens de contact</a>
+  <div class="wrap">
+    <div class="cb-card">
+      <div class="cb-text">
+        <h2>{title}</h2>
+        <p>{text}</p>
+        <div class="cta">
+          <a class="btn btn-wa btn-lg" href={waLink(message)} target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa" /></svg>Écrire sur WhatsApp</a>
+          <a class="btn btn-light btn-lg" href="/contact">Autres moyens de contact</a>
+        </div>
+      </div>
+      <div class="cb-photo"><Photo src="cles" alt="" sizes="(max-width: 900px) 0px, 420px" widths={[480, 800]} /></div>
     </div>
   </div>
 </section>

@@ -12,6 +12,6 @@ const tags = [c.franco >= 2 ? "Communauté francophone" : "", c.sea === 3 ? "Bor
     <span class="cc-region">{c.region}</span>
     <b>{c.name}</b>
     <span class="cc-price">{c.avg ? <>{shekK(c.avg)} <small>prix moyen d’un appartement</small></> : <>≈ {fmt(c.m2)} ₪/m² <small>estimation</small></>}</span>
-    {tags.length > 0 && <span class="cc-tags">{tags.join(" · ")}</span>}
+    {tags.length > 0 && <span class="cc-tags">{tags.map((t) => <i>{t}</i>)}</span>}
   </div>
 </a>
