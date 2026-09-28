@@ -11,18 +11,18 @@ import { SERVICES, TOOLS } from "../data/nav";
 const home = HOME_CITIES.map((id) => CITIES.find((c) => c.id === id)).filter((c) => !!c);
 const POINTS: Record<string, string[]> = {
   "/alyah": ["Choix de la ville et du quartier", "Visites sur place ou en vidéo", "Vérification juridique et financement"],
-  "/investissement": ["Étude de rentabilité avant l’achat", "Recherche de locataires et bail", "Gestion sur place, point mensuel"],
-  "/renovation-revente": ["Repérage et négociation du bien", "Plans d’architecte et travaux", "Remise en vente et partage du gain"],
+  "/investissement": ["Étude de rentabilité avant l’achat", "Location ou rénovation‑revente", "Choix des villes selon le rendement"],
+  "/gestion": ["Travaux et rénovation par nos artisans", "Recherche de locataires et bail", "Gestion au quotidien ou revente"],
 };
 ---
-<Base title="Agence immobilière francophone en Israël" description={`Agence immobilière francophone en Israël : achat et location pour votre alyah, investissement locatif, rénovation et revente. Avocats, architectes et artisans, depuis ${SITE.years} ans.`}>
+<Base title="Agence immobilière francophone en Israël" description={`Agence immobilière francophone en Israël : achat et location pour votre alyah, investissement, gestion et rénovation de votre bien. Avocats, architectes et artisans, depuis ${SITE.years} ans.`}>
   <section class="hero">
     <Photo src={SITE.heroPhoto} alt="Tel Aviv et Jaffa vues du ciel, au bord de la Méditerranée" class="hero-img" sizes="100vw" widths={[640, 1024, 1600]} eager />
     <div class="hero-shade"></div>
     <div class="wrap hero-in">
-      <span class="kicker">Achat · Location · Investissement · Rénovation</span>
+      <span class="kicker">Achat · Location · Investissement · Gestion</span>
       <h1>Agence immobilière francophone en Israël</h1>
-      <p class="hero-lead">Nous accompagnons les francophones qui achètent, louent, investissent ou rénovent en Israël : recherche du bien, vérifications par notre avocat, financement et travaux. Une seule équipe, en français, du premier échange à la remise des clés.</p>
+      <p class="hero-lead">Nous accompagnons les francophones qui achètent, louent, investissent ou possèdent un bien en Israël : recherche du bien, vérifications par notre avocat, financement, travaux, location et gestion. Une seule équipe, en français, du premier échange à la remise des clés.</p>
       <div class="cta">
         <a class="btn btn-primary btn-lg" href="#services">Voir nos services</a>
         <a class="btn btn-outline-light btn-lg" href="/contact">Parler à un conseiller</a>
@@ -40,7 +40,7 @@ const POINTS: Record<string, string[]> = {
       <div class="sec-head">
         <span class="kicker">Nos services</span>
         <h2>Que souhaitez‑vous faire en Israël ?</h2>
-        <p class="lead">Trois métiers, une même équipe. Choisissez votre projet pour voir comment nous travaillons.</p>
+        <p class="lead">Y vivre, investir, ou faire gérer un bien que vous possédez : une même équipe pour les trois.</p>
       </div>
       <div class="services">
         {SERVICES.map((s) => (

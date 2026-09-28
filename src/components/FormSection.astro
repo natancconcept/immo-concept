@@ -7,7 +7,14 @@ const { eyebrow, title, lead, goal } = Astro.props;
 ---
 <section class="form-sec" id="formulaire">
   <div class="wrap form-grid">
-    <div class="sec-head"><span class="kicker">{eyebrow}</span><h2>{title}</h2><p class="lead">{lead}</p></div>
+    <div class="sec-head">
+      <span class="kicker">{eyebrow}</span><h2>{title}</h2><p class="lead">{lead}</p>
+      <ul class="ticks form-points">
+        <li>Gratuit et sans engagement</li>
+        <li>Un conseiller francophone vous répond sur WhatsApp</li>
+        <li>Vos réponses restent sur votre appareil jusqu’à l’envoi</li>
+      </ul>
+    </div>
     <Questionnaire goal={goal} />
   </div>
 </section>

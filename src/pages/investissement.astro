@@ -1,34 +1,61 @@
 ---
 import Base from "../layouts/Base.astro";
 import PageHero from "../components/PageHero.astro";
+import Steps from "../components/Steps.astro";
 import Simulator from "../components/Simulator.astro";
+import BeforeAfter from "../components/BeforeAfter.astro";
 import FormSection from "../components/FormSection.astro";
 import Related from "../components/Related.astro";
 import { CITIES } from "../data/cities";
+import { PUBLIC_PROJECTS } from "../data/gallery";
+import { shekK } from "../lib/format";
+const PROJECTS = PUBLIC_PROJECTS();
 const byYield = [...CITIES].sort((a, b) => b.rent / b.m2 - a.rent / a.m2).slice(0, 5);
 const yieldOf = (c: (typeof CITIES)[number]) => (c.rent * 12 / c.m2 * 100).toFixed(1).replace(".", ",");
 ---
-<Base title="Investissement locatif en Israël" description="Investir dans le locatif en Israël : choix des quartiers selon le rendement, étude de rentabilité, recherche de locataires et gestion sur place. Simulateur de rendement par ville.">
-  <PageHero photo="interieur-blanc" photoAlt="Appartement blanc et lumineux, prêt à louer" he="השקעה" eyebrow="Investissement locatif" crumbs={[{ label: "Investissement locatif" }]}
-    title="Investir dans l’immobilier locatif en Israël"
-    lead="Acheter pour louer ou revendre un bien que vous possédez déjà : on vous montre les chiffres avant chaque décision, et on gère sur place.">
-    <a class="btn btn-primary btn-lg" href="#formulaire">Décrire mon investissement</a>
-    <a class="btn btn-ghost btn-lg" href="#simulateur">Calculer un rendement</a>
+<Base title="Investir dans l’immobilier en Israël" description="Investir dans l’immobilier en Israël : acheter pour louer, ou acheter un bien à rénover pour le revendre (« coup de fusil »). Étude chiffrée, avocat, travaux, gestion. Simulateur par ville.">
+  <PageHero photo="interieur-blanc" photoAlt="Appartement blanc et lumineux" he="השקעה" eyebrow="Investissement" crumbs={[{ label: "Investissement" }]}
+    title="Investir dans l’immobilier en Israël"
+    lead="Deux stratégies : acheter pour louer et toucher un loyer, ou acheter un bien à rénover pour le revendre avec une plus‑value. Dans les deux cas, vous avez les chiffres par écrit avant de décider.">
+    <a class="btn btn-primary btn-lg" href="#formulaire">Décrire mon projet</a>
+    <a class="btn btn-ghost btn-lg" href="#simulateur">Faire une simulation</a>
   </PageHero>
+
   <section>
     <div class="wrap">
+      <div class="sec-head"><span class="kicker">Deux stratégies</span><h2>Louer ou rénover pour revendre</h2></div>
       <div class="duo">
-        <article class="card"><h3>Acheter pour louer</h3><ul class="ticks"><li>Choix des quartiers selon le rendement et la demande locative</li><li>Étude de rentabilité chiffrée avant l’offre</li><li>Recherche de locataires, bail, état des lieux</li><li>Gestion sur place et point mensuel sur WhatsApp</li></ul></article>
-        <article class="card"><h3>Vendre votre bien</h3><ul class="ticks"><li>Estimation au prix du marché</li><li>Petits travaux de mise en valeur si utiles</li><li>Photos, annonces, visites et négociation</li><li>Signature et suivi par notre avocat</li></ul></article>
+        <article class="card" id="louer">
+          <span class="tag-note">Revenu régulier</span>
+          <h3 style="margin-top:6px">Acheter pour louer</h3>
+          <ul class="ticks">
+            <li>Choix de la ville et du quartier selon le rendement et la demande locative</li>
+            <li>Étude de rentabilité chiffrée avant l’offre : prix, frais, loyer, mensualité</li>
+            <li>Achat sécurisé par notre avocat</li>
+            <li>Mise en location et gestion sur place, avec notre service <a href="/gestion">Gestion de votre bien</a></li>
+          </ul>
+        </article>
+        <article class="card" id="revente">
+          <span class="tag-note">Plus‑value · « coup de fusil »</span>
+          <h3 style="margin-top:6px">Acheter, rénover, revendre</h3>
+          <ul class="ticks">
+            <li>Repérage d’un bien vendu sous le prix du marché, et négociation</li>
+            <li>Nouveaux plans par notre architecte, travaux par nos artisans</li>
+            <li>Revente : photos, annonces, visites, signature chez l’avocat</li>
+            <li>Répartition du bénéfice selon le contrat, photos du chantier chaque semaine</li>
+          </ul>
+        </article>
       </div>
     </div>
   </section>
+
   <section class="alt" id="simulateur">
     <div class="wrap">
-      <div class="sec-head"><span class="kicker">Simulateur</span><h2>Quel rendement, ville par ville ?</h2><p class="lead">Changez la ville, la surface et l’apport pour comparer.</p></div>
+      <div class="sec-head"><span class="kicker">Simulateur</span><h2>Rendement ou plus‑value, ville par ville</h2><p class="lead">Choisissez « Investir » pour la location, « Rénover &amp; revendre » pour une opération de plus‑value.</p></div>
       <Simulator mode="invest" />
     </div>
   </section>
+
   <section>
     <div class="wrap split">
       <div>
@@ -44,6 +71,64 @@ const yieldOf = (c: (typeof CITIES)[number]) => (c.rent * 12 / c.m2 * 100).toFix
     </div>
   </section>
 
-  <FormSection eyebrow="Votre projet" title="Parlons de votre investissement" lead="Trois questions, puis un conseiller vous envoie une première étude." goal="invest" />
+  <section class="alt">
+    <div class="wrap">
+      <div class="sec-head"><span class="kicker">Rénover pour revendre</span><h2>Une opération, étape par étape</h2><p class="lead">Chaque étape est tenue par un professionnel de notre équipe. Vous recevez photos et comptes rendus sur WhatsApp.</p></div>
+      <Steps items={[
+        { title: "Achat", text: "Repérage d’un bien sous le prix du marché, négociation, compromis.", who: "Agent + avocat" },
+        { title: "Architecture", text: "Nouveaux plans, choix des matériaux, permis si besoin.", who: "Architecte" },
+        { title: "Travaux", text: "Maçonnerie, électricité, plomberie, cuisine, sols, peinture.", who: "Artisans" },
+        { title: "Revente", text: "Photos professionnelles, mise en vente, visites et négociation.", who: "Agent" },
+        { title: "Plus‑value", text: "Signature chez l’avocat et répartition du bénéfice.", who: "Avocat" },
+      ]} />
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="sec-head"><span class="kicker">Avant / après</span><h2>Ce que change une rénovation complète</h2></div>
+      {PROJECTS.length > 0 ? (
+        <div class="ba-grid" id="flipProjects">
+          <div>
+            {PROJECTS.map((p, i) => (
+              <div class="proj-view" data-i={i} hidden={i !== 0}>
+                <BeforeAfter before={p.before} after={p.after} kind={p.kind} seed={p.seed} label={`${p.title}, ${p.city}`} big />
+                <div class="figs"><div><small>Achat</small><b>{shekK(p.buy)}</b></div><div><small>Travaux</small><b>{shekK(p.works)}</b></div><div><small>Revente</small><b>{shekK(p.sale)}</b></div><div><small>Durée</small><b>{p.months} mois</b></div></div>
+              </div>
+            ))}
+          </div>
+          <div class="projects">
+            {PROJECTS.map((p, i) => <button type="button" class="proj" data-i={i} aria-pressed={i === 0 ? "true" : "false"}><b>{p.title}</b><span class="meta">{p.city} · {p.months} mois de travaux {p.demo && <>· <span class="ph">exemple</span></>}</span></button>)}
+          </div>
+        </div>
+      ) : (
+        <div class="ba-grid">
+          <div>
+            <BeforeAfter before="chantier-avant" after="cuisine-moderne" kind="kitchen" seed={11} label="un appartement à rénover, puis refait à neuf" big />
+            <p class="photo-note">Photos d’illustration. Glissez pour comparer. Nos chantiers réels, avec leurs chiffres, seront présentés ici.</p>
+          </div>
+          <div>
+            <ul class="ticks">
+              <li>Plans repensés par notre architecte : plus de lumière, plus d’espace utile</li>
+              <li>Électricité, plomberie, cuisine, salle de bain et sols entièrement refaits</li>
+              <li>Un bien prêt à vivre, qui se loue ou se vend plus vite et plus cher</li>
+              <li>Photos et compte rendu chaque semaine sur WhatsApp</li>
+            </ul>
+            <p class="lead" style="margin-top:20px;font-size:16px">Vous possédez déjà un bien à rénover ? C’est notre service <a href="/gestion">Gestion de votre bien</a>.</p>
+          </div>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <FormSection eyebrow="Votre projet" title="Parlons de votre investissement" lead="Quelques questions, puis un conseiller vous envoie une première étude chiffrée." goal="invest" />
   <Related exclude="/investissement" />
 </Base>
+
+<script>
+  const root = document.getElementById("flipProjects");
+  if (root) root.querySelectorAll<HTMLButtonElement>(".proj").forEach((b) => b.addEventListener("click", () => {
+    root.querySelectorAll<HTMLElement>(".proj-view").forEach((v) => (v.hidden = v.dataset.i !== b.dataset.i));
+    root.querySelectorAll(".proj").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  }));
+</script>

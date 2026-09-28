@@ -5,19 +5,26 @@ import Questionnaire from "../components/Questionnaire.astro";
 import Photo from "../components/Photo.astro";
 import Related from "../components/Related.astro";
 import { CITIES } from "../data/cities";
+import { waLink } from "../data/site";
 ---
 <Base title="Trouver ma ville en Israël" description="Famille, pratique religieuse, travail, santé, communauté francophone et budget : répondez au questionnaire et découvrez les villes d’Israël qui vous correspondent.">
   <section class="tmv-head">
-    <div class="wrap">
-      <Crumbs items={[{ label: "Outils" }, { label: "Trouver ma ville" }]} />
-      <span class="kicker">Outil gratuit</span>
-      <h1>Trouver ma ville en Israël</h1>
-      <p class="lead">Répondez à quelques questions sur votre famille, votre pratique, votre travail et votre budget. Nous comparons vos réponses aux {CITIES.length} villes que nous suivons et vous indiquons celles qui vous correspondent le mieux, avec les raisons.</p>
-      <ul class="tmv-facts">
-        <li>Gratuit</li>
-        <li>Environ 3 minutes</li>
-        <li>Sans inscription</li>
-      </ul>
+    <div class="wrap tmv-head-grid">
+      <div>
+        <Crumbs items={[{ label: "Outils" }, { label: "Trouver ma ville" }]} />
+        <span class="kicker">Gratuit · 3 minutes · sans inscription</span>
+        <h1>Trouver ma ville en Israël</h1>
+        <p class="lead">Répondez à quelques questions : nous comparons vos réponses aux {CITIES.length} villes que nous suivons et vous indiquons celles qui vous correspondent le mieux, avec les raisons.</p>
+        <ul class="ticks tmv-criteria">
+          <li>Famille, enfants et âge</li>
+          <li>Pratique religieuse et communauté francophone</li>
+          <li>Métier, lieu de travail et santé</li>
+          <li>Budget, type de logement, neuf ou ancien</li>
+        </ul>
+      </div>
+      <div class="tmv-photo">
+        <Photo src="promenade-tel-aviv" alt="Promenade bordée de palmiers au bord de la mer" sizes="(max-width: 1000px) 0px, 440px" widths={[480, 900]} eager />
+      </div>
     </div>
   </section>
 
@@ -25,20 +32,9 @@ import { CITIES } from "../data/cities";
     <div class="wrap tmv-grid">
       <div class="tmv-main">
         <Questionnaire readQuery />
+        <p class="tmv-note">Vos réponses restent sur votre appareil, sauf si vous nous les envoyez ou demandez le conseil rédigé par l’IA.</p>
       </div>
       <aside class="tmv-side" aria-label="À propos du questionnaire">
-        <div class="tmv-photo">
-          <Photo src="promenade-tel-aviv" alt="Promenade bordée de palmiers au bord de la mer" sizes="340px" widths={[400, 700]} />
-        </div>
-        <div class="tmv-box">
-          <h2>Ce que nous prenons en compte</h2>
-          <ul class="ticks">
-            <li>Votre famille, l’âge des enfants et le vôtre</li>
-            <li>Votre pratique religieuse et la communauté francophone</li>
-            <li>Votre métier, votre lieu de travail et vos besoins de santé</li>
-            <li>Votre budget, le type de logement, neuf ou ancien</li>
-          </ul>
-        </div>
         <div class="tmv-box">
           <h2>Et ensuite ?</h2>
           <ol class="tmv-next">
@@ -47,7 +43,11 @@ import { CITIES } from "../data/cities";
             <li><b>Les visites</b><span>Sur place ou en vidéo, dans les villes retenues.</span></li>
           </ol>
         </div>
-        <p class="tmv-note">Vos réponses restent sur votre appareil, sauf si vous nous les envoyez ou demandez le conseil rédigé par l’IA.</p>
+        <div class="tmv-box tmv-help">
+          <h2>Une question ?</h2>
+          <p>Un conseiller francophone vous répond directement.</p>
+          <a class="btn btn-wa" href={waLink("Bonjour, j’ai une question sur le choix de ma ville en Israël.")} target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa" /></svg>Écrire sur WhatsApp</a>
+        </div>
       </aside>
     </div>
   </section>

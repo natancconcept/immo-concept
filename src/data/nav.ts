@@ -7,11 +7,11 @@ export interface NavLink { href: string; title: string; desc?: string; he?: stri
 
 export const SERVICES: NavLink[] = [
   { href: "/alyah", title: "Achat & location", he: "עלייה", photo: "interieur-soleil", photoAlt: "Salon lumineux",
-    desc: "Trouver, vérifier et acheter (ou louer) votre logement, que vous soyez en France ou déjà en Israël." },
-  { href: "/investissement", title: "Investissement locatif", he: "השקעה", photo: "interieur-blanc", photoAlt: "Appartement blanc et lumineux",
-    desc: "Acheter pour louer, trouver les locataires, gérer sur place, ou vendre un bien que vous possédez." },
-  { href: "/renovation-revente", title: "Rénovation & revente", he: "שיפוץ", photo: "cuisine-en-travaux", photoAlt: "Cuisine en travaux",
-    desc: "Acheter un bien sous‑évalué, le rénover entièrement avec nos artisans, le revendre avec une plus‑value." },
+    desc: "Pour y vivre : trouver, vérifier et acheter (ou louer) votre logement, que vous soyez en France ou déjà en Israël." },
+  { href: "/investissement", title: "Investissement", he: "השקעה", photo: "interieur-blanc", photoAlt: "Appartement blanc et lumineux",
+    desc: "Pour que ça rapporte : acheter pour louer, ou acheter un bien à rénover pour le revendre avec une plus‑value." },
+  { href: "/gestion", title: "Gestion de votre bien", he: "ניהול נכס", photo: "cles", photoAlt: "Remise des clés d’un appartement",
+    desc: "Vous avez un bien en Israël : nous le rénovons, trouvons les locataires, le gérons au quotidien ou le revendons." },
 ];
 
 export const TOOLS: NavLink[] = [

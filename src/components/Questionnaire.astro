@@ -1,7 +1,7 @@
 ---
 /* Questionnaire « Trouver ma ville » : choix du projet, étapes, coordonnées, puis résultat.
-   `goal` choisit le projet d'avance (pages Alyah, Investissement, Coup de fusil).
-   Sur /trouver-ma-ville, l'adresse peut le préciser : ?projet=alyah | investissement | renovation-revente */
+   `goal` choisit le projet d'avance (pages Alyah, Investissement, Gestion).
+   Sur /trouver-ma-ville, l'adresse peut le préciser : ?projet=alyah | investissement | gestion */
 import type { GoalId } from "../data/questionnaire";
 interface Props { goal?: GoalId; readQuery?: boolean }
 const { goal, readQuery = false } = Astro.props;

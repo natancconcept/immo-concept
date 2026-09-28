@@ -19,12 +19,7 @@ export interface Question {
 }
 export interface Page { title: string; q: Question[] }
 export interface Goal { he: string; label: string; sub: string; slug: string; pages: Page[] }
-export type GoalId = "olim" | "invest" | "flip";
-
-const CITY_PAGE: Page = { title: "Villes et budget", q: [
-  { id: "cities", label: "Villes qui vous intéressent (plusieurs choix possibles)", type: "multi", req: true, opts: [...CITIES.map((c) => c.name), "Autre ville"] },
-  { id: "budget", label: "Budget total (₪)", type: "text", ph: "ex. 2 500 000", num: true },
-]};
+export type GoalId = "olim" | "invest" | "gestion";
 
 export const GOALS: Record<GoalId, Goal> = {
   olim: { he: "עלייה", label: "Je m’installe en Israël", sub: "Achat ou location, avec le choix de la ville", slug: "alyah", pages: [
@@ -54,18 +49,31 @@ export const GOALS: Record<GoalId, Goal> = {
       { id: "extras", label: "Indispensable pour vous (plusieurs choix possibles)", type: "multi", opts: ["Ascenseur", "Mamad (pièce sécurisée)", "Parking", "Synagogue à pied", "Près de la plage", "Écoles à proximité"] },
     ]},
   ]},
-  invest: { he: "השקעה", label: "J’investis dans le locatif", sub: "Acheter pour louer, ou vendre un bien", slug: "investissement", pages: [
+  invest: { he: "השקעה", label: "J’investis", sub: "Acheter pour louer, ou rénover pour revendre", slug: "investissement", pages: [
     { title: "Votre investissement", q: [
-      { id: "type", label: "Vous souhaitez", type: "chips", req: true, opts: ["Acheter pour louer", "Vendre un bien", "Les deux"] },
-      { id: "goal", label: "Votre priorité", type: "chips", req: true, opts: ["Rendement", "Valorisation", "Équilibre"] },
-      { id: "fin", label: "Financement", type: "chips", req: true, opts: ["Comptant", "Avec prêt", "À étudier"] },
-    ]}, CITY_PAGE]},
-  flip: { he: "שיפוץ", label: "Rénovation & revente", sub: "Acheter, rénover, revendre avec une plus‑value", slug: "renovation-revente", pages: [
-    { title: "Votre opération", q: [
+      { id: "type", label: "Votre stratégie", type: "chips", req: true, opts: ["Acheter pour louer", "Acheter, rénover et revendre", "Je ne sais pas encore"] },
+      { id: "goal", label: "Votre priorité", type: "chips", req: true, opts: ["Rendement", "Plus‑value", "Équilibre"] },
       { id: "capital", label: "Capital disponible", type: "chips", req: true, opts: ["Moins de 500 000 ₪", "500 000 à 1,5 M ₪", "Plus de 1,5 M ₪"] },
-      { id: "role", label: "Votre implication", type: "chips", req: true, opts: ["Je délègue tout", "Je veux suivre de près", "Associé actif"] },
-      { id: "horizon", label: "Horizon souhaité", type: "chips", req: true, opts: ["Moins de 12 mois", "12 à 24 mois", "Flexible"] },
-    ]}, CITY_PAGE]},
+      { id: "fin", label: "Financement", type: "chips", opts: ["Comptant", "Avec prêt", "À étudier"] },
+    ]},
+    { title: "Villes et délais", q: [
+      { id: "cities", label: "Villes qui vous intéressent (plusieurs choix possibles)", type: "multi", req: true, opts: [...CITIES.map((c) => c.name), "Aucune préférence"] },
+      { id: "horizon", label: "Horizon souhaité", type: "chips", opts: ["Moins de 12 mois", "12 à 24 mois", "Long terme"] },
+    ]},
+  ]},
+  gestion: { he: "ניהול נכס", label: "J’ai un bien à faire gérer", sub: "Rénovation, location, gestion ou revente de votre bien", slug: "gestion", pages: [
+    { title: "Votre besoin", q: [
+      { id: "situation", label: "Votre situation", type: "chips", req: true, opts: ["Je possède déjà un bien", "Je vais acheter un bien", "Bien hérité ou en indivision"] },
+      { id: "services", label: "Ce que vous attendez de nous (plusieurs choix possibles)", type: "multi", req: true, opts: ["Rénovation et travaux", "Trouver des locataires", "Gestion au quotidien", "Revente", "Plans et aménagement"] },
+      { id: "where", label: "Vous habitez", type: "chips", opts: ["En Israël", "À l’étranger"] },
+    ]},
+    { title: "Le bien", q: [
+      { id: "city", label: "Ville du bien", type: "chips", req: true, opts: [...CITIES.map((c) => c.name), "Autre ville"] },
+      { id: "ptype", label: "Type de bien", type: "chips", opts: ["Appartement", "Appartement avec jardin", "Penthouse / terrasse", "Maison / cottage"] },
+      { id: "prooms", label: "Taille", type: "chips", opts: ["2‑3 pièces", "4 pièces", "5 pièces et +"] },
+      { id: "state", label: "État actuel", type: "chips", opts: ["Bon état", "À rafraîchir", "Rénovation complète", "Je ne sais pas"] },
+    ]},
+  ]},
 };
 
 /** Lien vers le questionnaire avec un projet déjà choisi, ex. /trouver-ma-ville?projet=alyah */

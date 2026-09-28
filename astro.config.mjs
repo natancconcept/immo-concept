@@ -11,7 +11,7 @@ import { SITE } from "./src/data/site.ts";
 export default defineConfig({
   site: process.env.SITE_URL || SITE.url,
   trailingSlash: "never",
-  redirects: { "/coup-de-fusil": "/renovation-revente" },
+  redirects: { "/coup-de-fusil": "/investissement", "/renovation-revente": "/investissement" },
   // Les photos sont optimisées une fois pour toutes à la construction du site (WebP/AVIF).
   adapter: process.env.VERCEL ? vercel() : netlify({ imageCDN: false }),
   integrations: [sitemap({ filter: (page) => !page.includes("/api/") })],

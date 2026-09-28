@@ -1,0 +1,84 @@
+---
+import Base from "../layouts/Base.astro";
+import PageHero from "../components/PageHero.astro";
+import Steps from "../components/Steps.astro";
+import Photo from "../components/Photo.astro";
+import Simulator from "../components/Simulator.astro";
+import FormSection from "../components/FormSection.astro";
+import Related from "../components/Related.astro";
+
+const FAQ = [
+  ["Je vis en France, pouvez‑vous tout gérer à distance ?", "Oui. Nous visitons le bien, organisons les travaux, trouvons les locataires et gérons le quotidien. Vous recevez photos, devis et comptes rendus sur WhatsApp, et vous validez chaque décision importante."],
+  ["Mon bien n’a pas été acheté avec vous, pouvez‑vous le prendre en charge ?", "Oui, que vous l’ayez acheté seul, avec une autre agence ou reçu en héritage. Nous commençons par une visite et un bilan complet."],
+  ["Faut‑il forcément faire des travaux ?", "Non. Nous vous disons franchement si des travaux valent la peine : parfois un simple rafraîchissement suffit pour louer ou vendre dans de bonnes conditions."],
+  ["Comment sont fixés le loyer ou le prix de vente ?", "À partir des biens comparables dans le quartier et de l’état du vôtre. Vous recevez une estimation écrite avant toute mise en location ou en vente."],
+];
+const faqLd = { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: FAQ.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) };
+---
+<Base title="Gestion de votre bien en Israël" description="Vous possédez un bien en Israël ? Nous le rénovons, trouvons les locataires, le gérons au quotidien ou le revendons. Une équipe francophone, même si vous vivez à l’étranger.">
+  <script slot="head" type="application/ld+json" set:html={JSON.stringify(faqLd)} />
+  <PageHero photo="cuisine-moderne" photoAlt="Cuisine rénovée, prête à être louée" he="ניהול נכס" eyebrow="Gestion de votre bien" crumbs={[{ label: "Gestion de votre bien" }]}
+    title="Votre bien en Israël, nous nous en occupons"
+    lead="Vous possédez un appartement ou une maison en Israël, ou vous allez en acheter un ? Nous le reprenons en main : travaux, mise en location, gestion au quotidien ou revente. Vous suivez tout à distance, en français.">
+    <a class="btn btn-primary btn-lg" href="#formulaire">Confier mon bien</a>
+    <a class="btn btn-ghost btn-lg" href="#loyer">Estimer un loyer</a>
+  </PageHero>
+
+  <section>
+    <div class="wrap">
+      <div class="sec-head"><span class="kicker">Ce que nous prenons en charge</span><h2>Tout ce dont votre bien a besoin</h2><p class="lead">Choisissez un service ou confiez‑nous l’ensemble : un seul interlocuteur coordonne tout.</p></div>
+      <div class="features">
+        <div><h3>Rénovation et travaux</h3><p>Du rafraîchissement à la rénovation complète : plans par notre architecte, devis, travaux par nos artisans, suivi de chantier.</p></div>
+        <div><h3>Mise en location</h3><p>Estimation du loyer, photos, annonces, visites, choix du locataire, bail et état des lieux.</p></div>
+        <div><h3>Gestion au quotidien</h3><p>Encaissement des loyers, entretien et réparations, arnona, vaad bayit, et un point chaque mois sur WhatsApp.</p></div>
+        <div><h3>Revente</h3><p>Estimation au prix du marché, mise en valeur, visites, négociation, signature et suivi par notre avocat.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="alt">
+    <div class="wrap split">
+      <div>
+        <span class="kicker">Pour qui</span>
+        <h2 style="margin:12px 0 20px">Les propriétaires que nous accompagnons</h2>
+        <ul class="ticks" style="font-size:16.5px;gap:14px">
+          <li><span><b>Vous vivez à l’étranger</b> et voulez louer votre bien sans vous déplacer.</span></li>
+          <li><span><b>Vous avez hérité d’un bien</b>, ou il est vide depuis longtemps, et vous ne savez pas par où commencer.</span></li>
+          <li><span><b>Vous venez d’acheter</b> et voulez rénover avant d’y habiter ou de le louer.</span></li>
+          <li><span><b>Vous voulez vendre</b> au meilleur prix, avec ou sans travaux de mise en valeur.</span></li>
+        </ul>
+      </div>
+      <Photo src="artisan-carrelage" alt="Un artisan pose du carrelage sur un chantier" sizes="(max-width: 900px) 100vw, 50vw" widths={[480, 800, 1100]} />
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="sec-head"><span class="kicker">Notre méthode</span><h2>Comment nous prenons votre bien en main</h2></div>
+      <Steps items={[
+        { title: "Visite et bilan", text: "Nous visitons le bien et faisons le point sur son état et son potentiel.", who: "Conseiller" },
+        { title: "Proposition chiffrée", text: "Travaux éventuels, loyer attendu ou prix de vente : tout par écrit.", who: "Conseiller + architecte" },
+        { title: "Travaux", text: "Réalisés par nos artisans, avec photos chaque semaine.", who: "Artisans" },
+        { title: "Location ou vente", text: "Annonces, visites, choix du locataire ou de l’acheteur, contrat.", who: "Agent + avocat" },
+        { title: "Suivi", text: "Loyers, entretien, charges et compte rendu mensuel.", who: "Gestionnaire" },
+      ]} />
+    </div>
+  </section>
+
+  <section class="alt" id="loyer">
+    <div class="wrap">
+      <div class="sec-head"><span class="kicker">Simulateur</span><h2>Combien pourrait rapporter votre bien ?</h2><p class="lead">Choisissez la ville et la surface pour estimer le loyer. Nous affinons ensuite après la visite.</p></div>
+      <Simulator mode="location" />
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap narrow">
+      <div class="sec-head"><span class="kicker">Questions fréquentes</span><h2>Ce que les propriétaires nous demandent</h2></div>
+      <div class="faq">{FAQ.map(([q, a]) => <details><summary>{q}</summary><p>{a}</p></details>)}</div>
+    </div>
+  </section>
+
+  <FormSection eyebrow="Votre bien" title="Confiez‑nous votre bien" lead="Quelques questions sur votre bien et vos besoins, puis un conseiller vous recontacte sur WhatsApp." goal="gestion" />
+  <Related exclude="/gestion" />
+</Base>

@@ -8,12 +8,12 @@ Site vitrine construit avec [Astro](https://astro.build) à partir de la maquett
 |---|---|
 | `/` | Accueil |
 | `/alyah` | Acheter ou louer pour son alyah, parcours, FAQ, questionnaire |
-| `/investissement` | Investissement locatif, simulateur de rendement, formulaire |
-| `/renovation-revente` | Achat, rénovation et revente (« coup de fusil »), simulateur de plus‑value, avant/après, formulaire. L’ancienne adresse `/coup-de-fusil` y redirige |
+| `/investissement` | Investir : acheter pour louer, ou acheter, rénover et revendre (« coup de fusil »). Simulateur, rendement par ville, avant/après, formulaire |
+| `/gestion` | Gestion de votre bien : rénovation, mise en location, gestion au quotidien, revente. Estimation du loyer, FAQ, formulaire |
 | `/villes` et `/villes/<ville>` | Les 14 villes, une page par ville (ex. `/villes/netanya`) |
 | `/realisations` | Galerie filtrable : avant/après, ventes, témoignages, vidéos |
 | `/simulateur` | Simulateur complet. Accepte `?ville=haifa&mode=invest` |
-| `/trouver-ma-ville` | Le questionnaire. `?projet=alyah`, `investissement` ou `renovation-revente` ouvre directement le bon parcours |
+| `/trouver-ma-ville` | Le questionnaire. `?projet=alyah`, `investissement` ou `gestion` ouvre directement le bon parcours. Les anciennes adresses `/coup-de-fusil` et `/renovation-revente` redirigent vers `/investissement` |
 | `/agence` | Qui sommes‑nous : l’équipe, la méthode, les engagements, les villes |
 | `/contact` | WhatsApp, e‑mail et formulaire (le message s’ouvre dans WhatsApp) |
 | `/mentions-legales` | Mentions légales (à compléter dans `site.ts`) |
@@ -53,7 +53,7 @@ Pour tester le conseil de l’IA en local, copiez `.env.example` en `.env` et re
 | Hypothèses du simulateur (taux, durée du prêt, coût des travaux…) | bas de `src/data/cities.ts` |
 | Réalisations, ventes, témoignages, vidéos | `src/data/gallery.ts` |
 | Photos du site (accueil, villes, pages) | `src/assets/photos/` (liste et sources dans `SOURCES.md`) |
-| Opérations avant/après de la page Coup de fusil | `PROJECTS` dans `src/data/gallery.ts` |
+| Opérations avant/après de la page Investissement | `PROJECTS` dans `src/data/gallery.ts` |
 | Questions et réponses du questionnaire | `src/data/questionnaire.ts` |
 | Calcul de compatibilité des villes et prompt de l’IA | `src/lib/recommend.ts` |
 | Textes d’une page | `src/pages/<page>.astro` (ex. `src/pages/alyah.astro`) |
@@ -94,7 +94,7 @@ Les réalisations et témoignages de la maquette sont des **exemples** (`demo: t
 
 - la page Réalisations affiche « Nos réalisations arrivent ici » et disparaît du menu ;
 - la section « Ce que disent nos clients » ne s’affiche pas ;
-- la page Rénovation & revente montre un avant/après avec des photos d’illustration, présentées comme telles.
+- la page Investissement montre un avant/après avec des photos d’illustration, présentées comme telles.
 
 Pour publier du **vrai** contenu :
 
