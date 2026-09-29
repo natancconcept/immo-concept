@@ -1,24 +1,51 @@
 ---
-/* Cartes des partenaires : type, nom, descriptif et lien vers le site officiel. */
-import { PARTNERS } from "../data/partners";
-import Photo from "./Photo.astro";
+/* Partenaires.
+   - variant="band" (par défaut) : bandeau compact avec logos, une ligne et un lien (accueil, Alyah).
+   - variant="full" : fiches détaillées avec descriptif et bouton (page Partenaires). */
+import { PARTNERS, type Partner } from "../data/partners";
+interface Props { variant?: "band" | "full"; title?: string; text?: string }
+const { variant = "band", title = "Nos partenaires", text = "Des organismes reconnus de l’alyah et de l’intégration, avec qui nous travaillons pour vous." } = Astro.props;
+const ext = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></svg>`;
+const logo = (p: Partner) => p.logo
+  ? `<img src="${p.logo}" alt="Logo ${p.name}" loading="lazy" decoding="async">`
+  : `<span class="partner-mark ico-${p.tone}" aria-hidden="true">${p.initials}</span>`;
 ---
-<div class="partners">
-  {PARTNERS.map((p) => (
-    <article class="partner">
-      <div class="partner-head">
-        {p.logo
-          ? <span class="partner-logo"><Photo src={p.logo} alt={`Logo ${p.name}`} sizes="56px" widths={[112]} /></span>
-          : <span class={`partner-mark ico-${p.tone}`} aria-hidden="true">{p.initials}</span>}
-        <div><span class="partner-kind">{p.kind}</span><h3>{p.name}</h3></div>
-      </div>
-      <p>{p.desc}</p>
-      <a class="btn btn-ghost partner-btn" href={p.url} target="_blank" rel="noopener">
-        Visiter le site officiel
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></svg>
-        <span class="sr-only">(nouvel onglet)</span>
-      </a>
-    </article>
-  ))}
-</div>
-<p class="partners-note">Organismes indépendants de notre agence. Leurs services sont décrits sur leurs sites officiels.</p>
+{variant === "band" ? (
+  <div class="pband">
+    <div class="pband-head">
+      <span class="kicker">Partenaires</span>
+      <h2>{title}</h2>
+      <p>{text}</p>
+      <a class="link" href="/partenaires">En savoir plus</a>
+    </div>
+    <ul class="pband-list">
+      {PARTNERS.map((p) => (
+        <li class="pband-item">
+          <a class="pband-logo" href={p.url} target="_blank" rel="noopener" aria-label={`${p.name} : site officiel (nouvel onglet)`} set:html={logo(p)} />
+          <div class="pband-text">
+            <b>{p.name}</b>
+            <span>{p.short}</span>
+            <a class="pband-link" href={p.url} target="_blank" rel="noopener">Site officiel <Fragment set:html={ext} /><span class="sr-only"> de {p.name} (nouvel onglet)</span></a>
+          </div>
+        </li>
+      ))}
+    </ul>
+  </div>
+) : (
+  <>
+    <div class="pfull">
+      {PARTNERS.map((p) => (
+        <article class="pfull-item">
+          <div class="pfull-logo" set:html={logo(p)} />
+          <div class="pfull-body">
+            <span class="partner-kind">{p.kind}</span>
+            <h3>{p.name}</h3>
+            <p>{p.desc}</p>
+            <a class="btn btn-ghost partner-btn" href={p.url} target="_blank" rel="noopener">Visiter le site officiel <Fragment set:html={ext} /><span class="sr-only"> (nouvel onglet)</span></a>
+          </div>
+        </article>
+      ))}
+    </div>
+    <p class="partners-note">Organismes indépendants de notre agence. Leurs services sont décrits sur leurs sites officiels.</p>
+  </>
+)}
