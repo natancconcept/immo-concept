@@ -777,3 +777,81 @@ footer .logo-mark{background:var(--azure)}
   .kpi b{grid-column:2;grid-row:1 / span 2;margin:0;font-size:22px;white-space:nowrap}
   .kpi span{grid-column:1}
 }
+
+/* =====================================================================
+   Téléphone : pages plus courtes, carrousels, cibles tactiles
+   ===================================================================== */
+@media (max-width:700px){
+  section{padding-block:44px}
+  .sec-head{margin-bottom:22px;gap:8px}
+  .row-head{margin-bottom:20px;gap:12px}
+  .row-head .btn{padding:11px 16px}
+  h2{font-size:26px}
+  .lead{font-size:16px}
+
+  /* en-tête : boutons à la taille du doigt */
+  .top-actions .btn,.burger{min-height:44px;min-width:44px}
+
+  /* carrousels horizontaux */
+  .city-grid,.city-grid.three,.parcours,.partners,.related,.gal{
+    display:grid;grid-auto-flow:column;grid-template-columns:none;grid-auto-columns:82%;gap:12px;
+    overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;
+    margin-inline:-18px;padding:4px 18px 14px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .city-grid::-webkit-scrollbar,.parcours::-webkit-scrollbar,.partners::-webkit-scrollbar,.related::-webkit-scrollbar,.gal::-webkit-scrollbar{display:none}
+  .city-grid > *,.parcours > *,.partners > *,.related > *,.gal > *{scroll-snap-align:start}
+  .related a,.partner{height:100%}
+  .region-block+.region-block{margin-top:32px}
+  .region-h{font-size:21px;margin-bottom:12px}
+
+  /* accueil : cartes de services condensées */
+  .entry-card{padding:18px 18px 16px;gap:6px}
+  .entry-card h2{font-size:20px}
+  .entry-card .ticks{display:none}
+  .entry-card p{font-size:15px}
+  .entry-grid{gap:12px}
+
+  /* comment ça se passe */
+  .photo-stack img{aspect-ratio:16/9}
+  .steps-v{gap:14px;margin-bottom:22px}
+  .steps-v b{font-size:17px}
+  .steps-v span{font-size:14.5px}
+
+  /* tout compris : titres seuls, liste compacte */
+  .allin-col{padding:18px}
+  .allin-head h3{font-size:19px}
+  .allin-list li{padding:9px 0;grid-template-columns:30px 1fr}
+  .allin-list li::before{width:24px;height:24px;font-size:12.5px}
+  .allin-list span{display:none}
+  .allin-list b{font-size:15.5px;align-self:center}
+  .promises{grid-template-columns:1fr 1fr;gap:18px 14px;margin-top:26px;padding-top:22px}
+  .promises h3{font-size:16px}
+  .promises p{font-size:13.5px}
+  .promises .ico{width:36px;height:36px}
+
+  /* fonctionnalités, étapes, FAQ */
+  .features{gap:10px}
+  .features > div{padding:16px 18px}
+  .features h3{font-size:17px;margin-bottom:4px}
+  .features p{font-size:14.5px}
+  .steps{row-gap:18px}
+  .step{padding-top:14px}
+  .step h3{font-size:17px}
+  .faq summary{font-size:16.5px}
+
+  /* textes lisibles */
+  .cc-tags i,.partner-kind,.tag-note,.cc-region,.kicker{font-size:13px}
+
+  /* pied de page compact */
+  footer{padding-block:40px calc(28px + env(safe-area-inset-bottom,0px))}
+  .foot{grid-template-columns:1fr 1fr;gap:26px 18px}
+  .foot-brand,.foot > .foot-col:last-child{grid-column:1 / -1}
+  .foot-cities{grid-template-columns:repeat(3,1fr);gap:8px 12px;font-size:14px}
+  .foot-legal{margin-top:28px;flex-direction:column}
+  .float-wa{width:52px;height:52px;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+}
+.partner,.partner-btn{position:relative}
+@media (max-width:700px){
+  .city-grid,.city-grid.three,.parcours,.partners,.related,.gal{scroll-padding-inline:18px}
+  .prow a{display:inline-block;padding:10px 0}
+  .prow{padding:2px 0}
+}
