@@ -23,6 +23,7 @@ export const TOOLS: NavLink[] = [
 
 export const AGENCY: NavLink[] = [
   { href: "/agence", title: "Qui sommes‑nous", desc: "Notre équipe, notre méthode et nos engagements." },
+  { href: "/partenaires", title: "Nos partenaires", desc: "Agence juive, Qualita, OlimAid : les organismes de l’alyah avec qui nous travaillons." },
   ...(PUBLIC_GALLERY.length ? [{ href: "/realisations", title: "Réalisations", desc: "Chantiers, ventes et avis de nos clients." }] : []),
   { href: "/contact", title: "Contact", desc: "WhatsApp, e‑mail, ou un message en ligne." },
 ];

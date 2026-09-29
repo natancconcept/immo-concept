@@ -1,0 +1,35 @@
+---
+import Base from "../layouts/Base.astro";
+import PageHero from "../components/PageHero.astro";
+import Partners from "../components/Partners.astro";
+import Related from "../components/Related.astro";
+import ContactBand from "../components/ContactBand.astro";
+import { SITE } from "../data/site";
+---
+<Base title="Nos partenaires" description={`Les partenaires de ${SITE.name} pour l’alyah et l’intégration en Israël : l’Agence juive pour Israël, Qualita, OlimAid.`}>
+  <PageHero photo="coucher-soleil-plage" photoAlt="Coucher de soleil sur la plage" eyebrow="L’agence" crumbs={[{ label: "L’agence", href: "/agence" }, { label: "Nos partenaires" }]}
+    title="Nos partenaires"
+    lead="Un projet immobilier fait partie d’une installation plus large. Nous travaillons avec des organismes reconnus de l’alyah et de l’intégration, pour que vous ayez les bons interlocuteurs à chaque étape." />
+
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="kicker">Alyah et intégration</span>
+        <h2>Des organismes de confiance, à vos côtés</h2>
+        <p class="lead">Dossier d’alyah, droits, emploi, démarches administratives : ils vous accompagnent pour tout ce qui ne concerne pas le logement. Pour le logement, c’est nous.</p>
+      </div>
+      <Partners />
+    </div>
+  </section>
+
+  <section class="alt">
+    <div class="wrap narrow" style="text-align:center">
+      <h2>Vous représentez un organisme ?</h2>
+      <p class="lead" style="margin:12px auto 22px">Associations, services d’accompagnement des olim, professionnels : écrivez‑nous pour construire un partenariat.</p>
+      <a class="btn btn-primary btn-lg" href="/contact">Nous contacter</a>
+    </div>
+  </section>
+
+  <Related title="Nos services et outils" />
+  <ContactBand />
+</Base>

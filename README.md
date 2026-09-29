@@ -15,6 +15,7 @@ Site vitrine construit avec [Astro](https://astro.build) à partir de la maquett
 | `/simulateur` | Simulateur complet. Accepte `?ville=haifa&mode=invest` |
 | `/trouver-ma-ville` | Le questionnaire. `?projet=alyah`, `investissement` ou `gestion` ouvre directement le bon parcours. Les anciennes adresses `/coup-de-fusil` et `/renovation-revente` redirigent vers `/investissement` |
 | `/agence` | Qui sommes‑nous : l’équipe, la méthode, les engagements, les villes |
+| `/partenaires` | Nos partenaires (Agence juive, Qualita, OlimAid), avec lien vers leur site officiel |
 | `/contact` | WhatsApp, e‑mail et formulaire (le message s’ouvre dans WhatsApp) |
 | `/mentions-legales` | Mentions légales (à compléter dans `site.ts`) |
 
@@ -47,6 +48,7 @@ Pour tester le conseil de l’IA en local, copiez `.env.example` en `.env` et re
 | Pour changer… | Fichier |
 |---|---|
 | **Nom de la société, numéro WhatsApp, e‑mail**, adresse du site, années d’expérience, mentions légales | `src/data/site.ts` (le seul endroit où ils figurent) |
+| Partenaires (nom, descriptif, lien, logo) | `src/data/partners.ts` |
 | Menu, pied de page et liens « À voir aussi » (titres et descriptions des services et outils) | `src/data/nav.ts` |
 | Les villes : prix, loyers, notes, quartiers, hôpitaux, présentation | `src/data/cities.ts` |
 | Les villes mises en avant sur l’accueil | `HOME_CITIES` dans `src/data/cities.ts` |

@@ -6,6 +6,7 @@ import Icon from "../components/Icon.astro";
 import Engagements from "../components/Engagements.astro";
 import Testimonials from "../components/Testimonials.astro";
 import ContactBand from "../components/ContactBand.astro";
+import Partners from "../components/Partners.astro";
 import { SITE } from "../data/site";
 import { CITIES, HOME_CITIES } from "../data/cities";
 import { SERVICES, TOOLS } from "../data/nav";
@@ -113,6 +114,20 @@ const WHO: Record<string, string> = { "/alyah": "Vous faites votre alyah", "/inv
   </section>
 
   <Testimonials />
+
+  <section>
+    <div class="wrap">
+      <div class="row-head">
+        <div class="sec-head">
+          <span class="kicker">Nos partenaires</span>
+          <h2>Bien entouré pour votre alyah</h2>
+          <p class="lead">Nous travaillons avec des organismes reconnus de l’alyah et de l’intégration des francophones.</p>
+        </div>
+        <a class="btn btn-ghost" href="/partenaires">Tous nos partenaires</a>
+      </div>
+      <Partners />
+    </div>
+  </section>
 
   <ContactBand />
 </Base>
