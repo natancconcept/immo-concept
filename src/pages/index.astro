@@ -6,7 +6,7 @@ import Icon from "../components/Icon.astro";
 import Engagements from "../components/Engagements.astro";
 import Testimonials from "../components/Testimonials.astro";
 import ContactBand from "../components/ContactBand.astro";
-import { SITE, waLink } from "../data/site";
+import { SITE } from "../data/site";
 import { CITIES, HOME_CITIES } from "../data/cities";
 import { SERVICES, TOOLS } from "../data/nav";
 import { questionnaireLink } from "../data/questionnaire";
@@ -16,53 +16,33 @@ const POINTS: Record<string, string[]> = {
   "/investissement": ["Étude de rentabilité avant l’achat", "Location ou rénovation‑revente", "Choix des villes selon le rendement"],
   "/gestion": ["Travaux et rénovation par nos artisans", "Recherche de locataires et bail", "Gestion au quotidien ou revente"],
 };
-const PATHS = [
-  { href: "/alyah", label: "Acheter pour y vivre", icon: "home" },
-  { href: "/simulateur?mode=location", label: "Louer un logement", icon: "key" },
-  { href: "/investissement", label: "Investir", icon: "chart" },
-  { href: "/gestion", label: "Faire gérer mon bien", icon: "tools" },
-  { href: questionnaireLink("olim"), label: "Trouver ma ville", icon: "pin" },
-] as const;
+const WHO: Record<string, string> = { "/alyah": "Vous faites votre alyah", "/investissement": "Vous investissez", "/gestion": "Vous avez un bien" };
 ---
-<Base title="L’agence immobilière des francophones en Israël" description={`Agence immobilière francophone en Israël : acheter ou louer pour votre alyah, investir, faire gérer votre bien. Avocat, banque, taxes et travaux compris, depuis ${SITE.years} ans.`}>
+<Base title="Immobilier en Israël pour les olim et les francophones" description={`Agence immobilière francophone en Israël : acheter ou louer pour votre alyah, investir, faire gérer votre bien. Avocat, banque, taxes et travaux compris, depuis ${SITE.years} ans.`}>
   <section class="hero">
     <Photo src={SITE.heroPhoto} alt="Tel Aviv et Jaffa vues du ciel, au bord de la Méditerranée" class="hero-img" sizes="100vw" widths={[640, 1024, 1600]} eager />
     <div class="hero-shade"></div>
     <div class="wrap hero-in">
-      <span class="hero-badge">Agence immobilière francophone · depuis {SITE.years} ans</span>
-      <h1>L’agence immobilière des francophones en Israël</h1>
-      <p class="hero-lead">Acheter, louer, investir ou faire gérer un bien : nous vous accompagnons en français, de la première question jusqu’aux clés. Avocat, banque, taxes et travaux compris.</p>
-      <p class="hero-ask">Que souhaitez‑vous faire ?</p>
-      <nav class="paths" aria-label="Accès rapide">
-        {PATHS.map((p) => <a href={p.href}><Icon name={p.icon} tone="blue" size="sm" />{p.label}</a>)}
-      </nav>
+      <span class="kicker">Agence immobilière francophone en Israël<span class="hide-sm"> · depuis {SITE.years} ans</span></span>
+      <h1>L’immobilier en Israël pour les olim et les francophones</h1>
+      <p class="hero-lead">Achat, location, investissement et gestion de votre bien. Nous vous accompagnons en français de la recherche jusqu’aux clés, avec avocat, banque et taxes compris.</p>
+      <div class="cta">
+        <a class="btn btn-primary btn-lg" href={questionnaireLink("olim")}>Trouver ma ville</a>
+        <a class="btn btn-outline-light btn-lg" href="/contact">Parler à un conseiller</a>
+      </div>
     </div>
-    <a class="hero-help" href={waLink("Bonjour, j’ai une question sur mon projet immobilier en Israël.")} target="_blank" rel="noopener">
-      <span class="hero-help-ic"><svg aria-hidden="true"><use href="#wa" /></svg></span>
-      <span><b>Une question ?</b><small>Un conseiller vous répond en français</small></span>
-    </a>
   </section>
 
-  <section id="services">
+  <section class="entry" id="services" aria-label="Nos services">
     <div class="wrap">
-      <div class="sec-head">
-        <span class="kicker">Nos services</span>
-        <h2>Trois façons de vous accompagner</h2>
-        <p class="lead">Vous voulez y vivre, investir, ou vous avez déjà un bien : une même équipe s’occupe de tout.</p>
-      </div>
-      <div class="services">
+      <div class="entry-grid">
         {SERVICES.map((s) => (
-          <a class="service" href={s.href}>
-            <div class="service-media">
-              <Photo src={s.photo!} alt={s.photoAlt!} sizes="(max-width: 900px) 100vw, 33vw" widths={[480, 800]} />
-              <Icon name={s.icon!} tone={s.tone} size="lg" />
-            </div>
-            <div class="service-body">
-              <h3>{s.title}</h3>
-              <p>{s.desc}</p>
-              <ul class="ticks">{POINTS[s.href].map((p) => <li>{p}</li>)}</ul>
-              <span class="link">Découvrir</span>
-            </div>
+          <a class="entry-card" href={s.href}>
+            <div class="entry-top"><Icon name={s.icon!} tone={s.tone} /><span class="entry-who">{WHO[s.href]}</span></div>
+            <h2>{s.title}</h2>
+            <p>{s.desc}</p>
+            <ul class="ticks">{POINTS[s.href].map((p) => <li>{p}</li>)}</ul>
+            <span class="link">Découvrir</span>
           </a>
         ))}
       </div>
@@ -73,7 +53,6 @@ const PATHS = [
     <div class="wrap split">
       <div class="photo-stack">
         <Photo src="emmenagement" alt="Un couple emménage dans son nouvel appartement" sizes="(max-width: 900px) 100vw, 50vw" widths={[480, 800, 1100]} />
-        <div class="photo-note-card"><Icon name="heart" tone="rose" size="sm" /><span><b>Un seul interlocuteur</b><small>du premier appel à la remise des clés</small></span></div>
       </div>
       <div>
         <span class="kicker">Comment ça se passe</span>
