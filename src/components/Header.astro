@@ -1,5 +1,6 @@
 ---
-import { SITE, logoMark, waLink } from "../data/site";
+import { SITE, logoMark, waLink, phoneDisplay } from "../data/site";
+import Icon from "./Icon.astro";
 import { CITIES, REGIONS } from "../data/cities";
 import { SERVICES, TOOLS, AGENCY } from "../data/nav";
 import { questionnaireLink } from "../data/questionnaire";
@@ -49,26 +50,56 @@ const cur = (href: string) => (path === href.split("?")[0] ? "page" : undefined)
   </div>
 </header>
 
-<div class="mmenu" id="mmenu" role="dialog" aria-modal="true" aria-label="Menu">
-  <div class="wrap mmenu-head">
+<div class="mmenu" id="mmenu" role="dialog" aria-modal="true" aria-label="Menu" hidden>
+  <div class="mmenu-head">
     <a class="logo" href="/"><span class="logo-mark" aria-hidden="true">{logoMark}</span><span class="logo-text"><b>{SITE.name}</b></span></a>
-    <button type="button" class="mmenu-close">Fermer</button>
+    <button type="button" class="mmenu-close" aria-label="Fermer le menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
   </div>
-  <nav class="wrap" aria-label="Menu mobile">
-    <h4>Services</h4>
-    {SERVICES.map((s) => <a href={s.href}>{s.title}</a>)}
-    <h4>Outils</h4>
-    {TOOLS.map((s) => <a href={s.href}>{s.title}</a>)}
-    <h4>L’agence</h4>
-    {AGENCY.map((s) => <a href={s.href}>{s.title}</a>)}
-    <h4>Villes</h4>
-    <div class="mm-cities">{CITIES.map((c) => <a href={`/villes/${c.id}`}>{c.name}</a>)}</div>
-    <a href="/villes">Comparer toutes les villes ›</a>
-    <div class="mm-actions">
-      <a class="btn btn-primary btn-lg" href={questionnaireLink("olim")}>Trouver ma ville</a>
-      <a class="btn btn-wa btn-lg" href={waLink()} target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa" /></svg>Écrire sur WhatsApp</a>
+  <nav class="mm-body" aria-label="Menu mobile">
+    <p class="mm-label">Nos services</p>
+    <div class="mm-group">
+      {SERVICES.map((s) => (
+        <a class="mm-row" href={s.href} aria-current={cur(s.href)}>
+          <Icon name={s.icon!} tone={s.tone} />
+          <span class="mm-text"><b>{s.title}</b><small>{s.menu}</small></span>
+          <span class="mm-chev" aria-hidden="true"></span>
+        </a>
+      ))}
+    </div>
+
+    <p class="mm-label">Outils gratuits</p>
+    <div class="mm-group">
+      {TOOLS.map((s) => (
+        <a class="mm-row" href={s.href} aria-current={cur(s.href)}>
+          <Icon name={s.icon!} tone={s.tone} />
+          <span class="mm-text"><b>{s.title}</b><small>{s.menu}</small></span>
+          <span class="mm-chev" aria-hidden="true"></span>
+        </a>
+      ))}
+    </div>
+
+    <p class="mm-label">Découvrir</p>
+    <div class="mm-group">
+      <details class="mm-acc" open={path.startsWith("/villes") || undefined}>
+        <summary class="mm-row"><Icon name="search" tone="mint" /><span class="mm-text"><b>Nos villes</b><small>{CITIES.length} villes, prix et vie sur place</small></span><span class="mm-chev" aria-hidden="true"></span></summary>
+        <div class="mm-cities">
+          {REGIONS.map((r) => <div><span>{r}</span>{CITIES.filter((c) => c.region === r).map((c) => <a href={`/villes/${c.id}`} aria-current={cur(`/villes/${c.id}`)}>{c.name}</a>)}</div>)}
+          <a class="mm-all" href="/villes">Comparer toutes les villes</a>
+        </div>
+      </details>
+      {AGENCY.map((s) => <a class="mm-row mm-simple" href={s.href} aria-current={cur(s.href)}><span class="mm-text"><b>{s.title}</b></span><span class="mm-chev" aria-hidden="true"></span></a>)}
+    </div>
+
+    <div class="mm-contact">
+      <span>Un conseiller vous répond en français</span>
+      <a href={waLink()} target="_blank" rel="noopener">{phoneDisplay()}</a>
+      <a href={`mailto:${SITE.email}`}>{SITE.email}</a>
     </div>
   </nav>
+  <div class="mm-foot">
+    <a class="btn btn-primary" href={questionnaireLink("olim")}><svg aria-hidden="true"><use href="#pin" /></svg>Trouver ma ville</a>
+    <a class="btn btn-wa" href={waLink()} target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa" /></svg>WhatsApp</a>
+  </div>
 </div>
 
 <script>
@@ -82,7 +113,18 @@ const cur = (href: string) => (path === href.split("?")[0] ? "page" : undefined)
   document.addEventListener("click", (e) => { if (!(e.target as Element).closest(".dd")) close() });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") { close(); setMenu(false) } });
   const menu = document.getElementById("mmenu")!, burger = document.querySelector<HTMLButtonElement>(".burger")!;
-  const setMenu = (open: boolean) => { menu.classList.toggle("open", open); document.body.classList.toggle("menu-open", open); burger.setAttribute("aria-expanded", String(open)) };
+  const closeBtn = menu.querySelector<HTMLButtonElement>(".mmenu-close")!;
+  let hideTimer = 0;
+  const setMenu = (open: boolean) => {
+    if (open === menu.classList.contains("open")) return;
+    clearTimeout(hideTimer);
+    if (open) { menu.hidden = false; requestAnimationFrame(() => menu.classList.add("open")); closeBtn.focus({ preventScroll: true }) }
+    else { menu.classList.remove("open"); hideTimer = window.setTimeout(() => (menu.hidden = true), 260); burger.focus({ preventScroll: true }) }
+    document.body.classList.toggle("menu-open", open);
+    burger.setAttribute("aria-expanded", String(open));
+  };
   burger.addEventListener("click", () => setMenu(true));
-  menu.querySelector(".mmenu-close")!.addEventListener("click", () => setMenu(false));
+  closeBtn.addEventListener("click", () => setMenu(false));
+  // Un lien vers une ancre de la page courante ferme aussi le menu.
+  menu.querySelectorAll<HTMLAnchorElement>("a[href]").forEach((a) => a.addEventListener("click", () => setMenu(false)));
 </script>
