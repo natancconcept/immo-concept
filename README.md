@@ -12,7 +12,7 @@ Site vitrine construit avec [Astro](https://astro.build) à partir de la maquett
 | `/gestion` | Gestion de votre bien : rénovation, mise en location, gestion au quotidien, revente. Estimation du loyer, FAQ, formulaire |
 | `/villes` et `/villes/<ville>` | Les 14 villes, une page par ville (ex. `/villes/netanya`) |
 | `/realisations` | Galerie filtrable : avant/après, ventes, témoignages, vidéos |
-| `/simulateur` | Simulateur complet. Accepte `?ville=haifa&mode=invest` |
+| `/simulateur` | Simulateur étape par étape (acheter, louer, investir, rénover) avec résultat détaillé : frais, taxe d’achat, prêt, rendement, plus‑value. Accepte `?mode=achat&ville=haifa&surface=100` |
 | `/trouver-ma-ville` | Le questionnaire. `?projet=alyah`, `investissement` ou `gestion` ouvre directement le bon parcours. Les anciennes adresses `/coup-de-fusil` et `/renovation-revente` redirigent vers `/investissement` |
 | `/agence` | Qui sommes‑nous : l’équipe, la méthode, les engagements, les villes |
 | `/partenaires` | Nos partenaires (Agence juive, Qualita, OlimAid), avec lien vers leur site officiel |
@@ -52,7 +52,7 @@ Pour tester le conseil de l’IA en local, copiez `.env.example` en `.env` et re
 | Menu, pied de page et liens « À voir aussi » (titres et descriptions des services et outils) | `src/data/nav.ts` |
 | Les villes : prix, loyers, notes, quartiers, hôpitaux, présentation | `src/data/cities.ts` |
 | Les villes mises en avant sur l’accueil | `HOME_CITIES` dans `src/data/cities.ts` |
-| Hypothèses du simulateur (taux, durée du prêt, coût des travaux…) | bas de `src/data/cities.ts` |
+| Hypothèses du simulateur : barèmes de la taxe d’achat, taux du prêt, part financée par les banques, frais d’avocat et d’agence, charges locatives, coût des travaux | `src/data/hypotheses.ts` (chaque chiffre est commenté) |
 | Réalisations, ventes, témoignages, vidéos | `src/data/gallery.ts` |
 | Photos du site (accueil, villes, pages) | `src/assets/photos/` (liste et sources dans `SOURCES.md`) |
 | Opérations avant/après de la page Investissement | `PROJECTS` dans `src/data/gallery.ts` |

@@ -24,7 +24,7 @@ const { goal, readQuery = false } = Astro.props;
   if (card && form) {
     interface State { step: number; goal: GoalId | null; a: Answers; name: string; phone: string; email: string; msg: string }
     const blank = (): State => ({ step: 0, goal: null, a: {}, name: "", phone: "", email: "", msg: "" });
-    const STORE = "cc-questionnaire";
+    const STORE = "cc-questionnaire-v2";
 
     // Projet imposé par la page, ou par l'adresse (?projet=alyah).
     let forced: GoalId | null = (card.dataset.goal as GoalId) || null;
@@ -41,54 +41,72 @@ const { goal, readQuery = false } = Astro.props;
     if (forced && state.goal !== forced) state = { ...blank(), goal: forced, step: 1 };
     const save = () => { try { sessionStorage.setItem(STORE, JSON.stringify(state)) } catch {} };
 
-    const pages = () => (state.goal ? GOALS[state.goal].pages : []);
-    const totalSteps = () => pages().length + 3; // choix + pages + coordonnées + résultat
+    // Suite d'écrans : choix du projet, une question par écran, coordonnées, résultat.
+    type Q = Question & { page: string };
+    const questions = (): Q[] => (state.goal
+      ? GOALS[state.goal].pages.flatMap((pg) => pg.q.filter((q) => !q.show || q.show(state.a)).map((q) => ({ ...q, page: pg.title })))
+      : []);
+    const qLabel = (q: Question) => q.label.replace(/ \(plusieurs choix possibles\)/, "");
     let lastReco: Reco[] = [];
 
-    function setProgress() {
-      const n = state.goal ? totalSteps() - 1 : 4;
-      document.getElementById("progress")!.innerHTML = Array.from({ length: n }, (_, i) => `<i class="${i <= state.step ? "on" : ""}"></i>`).join("");
+    function setProgress(n: number) {
+      const pct = state.goal ? Math.min(100, Math.round((state.step / (n + 1)) * 100)) : 4;
+      document.getElementById("progress")!.innerHTML = `<i style="width:${pct}%"></i>`;
     }
 
-    function fieldHTML(q: Question) {
+    const optHTML = (value: string, pressed: boolean, check = false, sub = "") =>
+      `<button type="button" class="opt${check ? " opt-check" : ""}" data-v="${esc(value)}" aria-pressed="${pressed}"><span class="opt-mark"></span><span class="opt-text"><b>${value}</b>${sub ? `<small>${sub}</small>` : ""}</span></button>`;
+
+    function questionHTML(q: Question) {
       const v = state.a[q.id];
-      if (q.type === "chips") return `<div class="field"><span class="lbl" id="l_${q.id}">${q.label}</span><div class="chips" role="group" aria-labelledby="l_${q.id}" data-q="${q.id}">` + q.opts!.map((o) => `<button type="button" aria-pressed="${v === o}">${o}</button>`).join("") + `</div></div>`;
-      if (q.type === "multi") return `<div class="field"><span class="lbl" id="l_${q.id}">${q.label}</span><div class="chips" role="group" aria-labelledby="l_${q.id}" data-m="${q.id}">` + q.opts!.map((o) => `<button type="button" aria-pressed="${Array.isArray(v) && v.includes(o)}">${o}</button>`).join("") + `</div></div>`;
+      const cols = (q.opts?.length || 0) > 8 ? " opts-3" : "";
+      if (q.type === "chips") return `<div class="opts${cols}" data-q="${q.id}">` + q.opts!.map((o) => optHTML(o, v === o)).join("") + `</div>`;
+      if (q.type === "multi") return `<div class="opts${cols}" data-m="${q.id}">` + q.opts!.map((o) => optHTML(o, Array.isArray(v) && v.includes(o), true)).join("") + `</div>`;
       if (q.type === "range") {
         const r = budgetRange(state.a); const val = Math.min(r.max, Math.max(r.min, +(v ?? 0) || r.def)); state.a[q.id] = val;
-        return `<div class="field"><div class="range-row"><label for="q_${q.id}">${isRent(state.a) ? "Loyer maximum" : "Budget d’achat maximum"}</label><output id="o_${q.id}">${fmt(val) + r.unit}</output></div><input type="range" id="q_${q.id}" data-r="${q.id}" min="${r.min}" max="${r.max}" step="${r.step}" value="${val}"></div>`;
+        return `<div class="q-range"><output id="o_${q.id}">${fmt(val) + r.unit}</output><input type="range" id="q_${q.id}" data-r="${q.id}" min="${r.min}" max="${r.max}" step="${r.step}" value="${val}" aria-label="${isRent(state.a) ? "Loyer maximum" : "Budget d’achat maximum"}"><div class="q-range-ends"><span>${fmt(r.min)}</span><span>${fmt(r.max)}${r.unit}</span></div></div>`;
       }
-      return `<div class="field"><label for="q_${q.id}">${q.label}</label><input type="text" ${q.num ? 'inputmode="numeric"' : ""} id="q_${q.id}" data-q="${q.id}" placeholder="${q.ph || ""}" value="${esc(v || "")}"></div>`;
+      return `<div class="field"><input type="text" ${q.num ? 'inputmode="numeric"' : ""} id="q_${q.id}" data-q="${q.id}" placeholder="${q.ph || ""}" value="${esc(v || "")}" aria-label="${esc(qLabel(q))}"></div>`;
     }
 
     function renderForm() {
-      setProgress();
-      const P = pages(), s = state.step;
+      const Q = questions(), n = Q.length;
+      if (state.step > n + 2) state.step = n + 2;
+      const s = state.step;
+      setProgress(n);
       let h = "";
       if (s === 0) {
-        h = `<h3 style="margin-bottom:14px">Quel est votre projet ?</h3><div class="choices">` +
-          (Object.entries(GOALS) as [GoalId, (typeof GOALS)[GoalId]][]).map(([k, g]) => `<button type="button" class="choice" data-goal="${k}" aria-pressed="${state.goal === k}"><span><b>${g.label}</b><span>${g.sub}</span></span></button>`).join("") + `</div>`;
-      } else if (s <= P.length) {
-        const pg = P[s - 1];
-        h = `<p class="kicker">${GOALS[state.goal!].label} · étape ${s} sur ${P.length}</p><h3 style="margin-bottom:16px">${pg.title}</h3>` +
-          pg.q.filter((q) => !q.show || q.show(state.a)).map(fieldHTML).join("");
-      } else if (s === P.length + 1) {
-        h = `<h3 style="margin-bottom:16px">Vos coordonnées</h3>
+        h = `<p class="kicker">Pour commencer</p><h3 class="q-title">Quel est votre projet ?</h3><div class="opts opts-1">` +
+          (Object.entries(GOALS) as [GoalId, (typeof GOALS)[GoalId]][]).map(([k, g]) => `<button type="button" class="opt" data-goal="${k}" aria-pressed="${state.goal === k}"><span class="opt-mark"></span><span class="opt-text"><b>${g.label}</b><small>${g.sub}</small></span></button>`).join("") + `</div><p class="err" id="err" role="alert"></p>`;
+      } else if (s <= n) {
+        const q = Q[s - 1];
+        h = `<p class="kicker">${q.page} · question ${s} sur ${n}</p><h3 class="q-title">${qLabel(q)}</h3>` +
+          (q.type === "multi" ? `<p class="q-help">Plusieurs choix possibles</p>` : "") + questionHTML(q);
+      } else if (s === n + 1) {
+        h = `<p class="kicker">Dernière étape</p><h3 class="q-title">Vos coordonnées</h3>
           <div class="row2"><div class="field"><label for="fName">Nom et prénom</label><input type="text" id="fName" autocomplete="name" value="${esc(state.name)}"></div>
           <div class="field"><label for="fPhone">Téléphone / WhatsApp</label><input type="tel" id="fPhone" autocomplete="tel" placeholder="+33 6… ou +972 5…" value="${esc(state.phone)}"></div></div>
-          <div class="field"><label for="fEmail">E‑mail</label><input type="email" id="fEmail" autocomplete="email" value="${esc(state.email)}"></div>
+          <div class="field"><label for="fEmail">E‑mail (facultatif)</label><input type="email" id="fEmail" autocomplete="email" value="${esc(state.email)}"></div>
           <div class="field"><label for="fMsg">Un mot sur votre projet (facultatif)</label><textarea id="fMsg" rows="3">${esc(state.msg)}</textarea></div>`;
       } else {
         h = resultHTML();
       }
-      if (s <= P.length + 1) {
-        h += `<p class="err" id="err" role="alert"></p><div class="form-nav">` +
-          (s > 0 ? `<button type="button" class="btn btn-ghost" id="back">Retour</button>` : `<span></span>`) +
-          `<button type="submit" class="btn btn-primary">${s === P.length + 1 ? (state.goal === "olim" ? "Voir mes villes" : "Voir ma demande") : "Continuer"}</button></div>`;
+      if (s >= 1 && s <= n + 1) {
+        const q = Q[s - 1], auto = s <= n && q.type === "chips";
+        h += `<p class="err" id="err" role="alert"></p><div class="form-nav"><button type="button" class="btn btn-ghost" id="back">Retour</button>` +
+          (!auto ? `<button type="submit" class="btn btn-primary">${s === n + 1 ? (state.goal === "olim" ? "Voir mes villes" : "Voir ma demande") : "Continuer"}</button>`
+                 : !q.req ? `<button type="button" class="link-btn" id="skip">Passer cette question</button>` : "") + `</div>`;
       }
       form!.innerHTML = h;
       bindForm();
       save();
+    }
+
+    // Passe à l'écran suivant et garde le questionnaire visible.
+    function next() {
+      state.step++; renderForm();
+      const top = card!.getBoundingClientRect().top;
+      if (top < 70 || top > innerHeight * 0.6) card!.scrollIntoView({ block: "start" });
     }
 
     function summaryText() {
@@ -181,21 +199,24 @@ const { goal, readQuery = false } = Astro.props;
     }
 
     function bindForm() {
-      form!.querySelectorAll<HTMLButtonElement>(".choice").forEach((b) => (b.onclick = () => {
+      form!.querySelectorAll<HTMLButtonElement>(".opt[data-goal]").forEach((b) => (b.onclick = () => {
         const g = b.dataset.goal as GoalId;
         if (state.goal !== g) { state.goal = g; state.a = {} }
-        state.step = 1; renderForm();
+        form!.querySelectorAll(".opt[data-goal]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+        state.step = 0; setTimeout(next, 180);
       }));
-      form!.querySelectorAll<HTMLElement>(".chips[data-q]").forEach((box) => box.querySelectorAll("button").forEach((b) => (b.onclick = () => {
+      // Réponse unique : on enregistre et on passe à la question suivante.
+      form!.querySelectorAll<HTMLElement>(".opts[data-q]").forEach((box) => box.querySelectorAll<HTMLButtonElement>(".opt").forEach((b) => (b.onclick = () => {
         const id = box.dataset.q!, before = isRent(state.a);
-        state.a[id] = b.textContent!; box.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-        // certaines réponses font apparaître ou changent d'autres questions
-        if (id === "family" || id === "job" || (id === "mode" && before !== isRent(state.a))) { if (id === "mode") delete state.a.budget; renderForm() }
-        else save();
+        state.a[id] = b.dataset.v!;
+        if (id === "mode" && before !== isRent(state.a)) delete state.a.budget;
+        box.querySelectorAll(".opt").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+        setTimeout(next, 180);
       })));
-      form!.querySelectorAll<HTMLElement>(".chips[data-m]").forEach((box) => box.querySelectorAll("button").forEach((b) => (b.onclick = () => {
-        const id = box.dataset.m!, arr = (Array.isArray(state.a[id]) ? state.a[id] : (state.a[id] = [])) as string[], o = b.textContent!, ix = arr.indexOf(o);
+      form!.querySelectorAll<HTMLElement>(".opts[data-m]").forEach((box) => box.querySelectorAll<HTMLButtonElement>(".opt").forEach((b) => (b.onclick = () => {
+        const id = box.dataset.m!, arr = (Array.isArray(state.a[id]) ? state.a[id] : (state.a[id] = [])) as string[], o = b.dataset.v!, ix = arr.indexOf(o);
         ix < 0 ? arr.push(o) : arr.splice(ix, 1); b.setAttribute("aria-pressed", String(ix < 0)); save();
+        document.getElementById("err")!.textContent = "";
       })));
       form!.querySelectorAll<HTMLInputElement>("input[data-q]").forEach((i) => (i.oninput = () => { state.a[i.dataset.q!] = i.value; save() }));
       form!.querySelectorAll<HTMLInputElement>("input[data-r]").forEach((i) => (i.oninput = () => {
@@ -205,6 +226,7 @@ const { goal, readQuery = false } = Astro.props;
       bind("fName", "name"); bind("fPhone", "phone"); bind("fEmail", "email"); bind("fMsg", "msg");
       const on = (id: string, fn: () => void) => { const el = document.getElementById(id); if (el) el.onclick = fn };
       on("back", () => { state.step--; renderForm() });
+      on("skip", () => next());
       on("editAns", () => { state.step = 1; renderForm() });
       on("restart", () => { state = blank(); lastReco = []; renderForm() });
       on("copyNum", () => {
@@ -218,18 +240,17 @@ const { goal, readQuery = false } = Astro.props;
 
     form.addEventListener("submit", (e) => {
       e.preventDefault();
-      const err = document.getElementById("err")!, P = pages(), s = state.step;
+      const err = document.getElementById("err")!, Q = questions(), n = Q.length, s = state.step;
       if (s === 0) { err.textContent = "Choisissez un type de projet pour continuer."; return }
-      if (s <= P.length) {
-        const miss = P[s - 1].q.filter((q) => q.req && (!q.show || q.show(state.a)) && (q.type === "multi" ? !(state.a[q.id] as string[] | undefined || []).length : !state.a[q.id]));
-        if (miss.length) { err.textContent = `Répondez à : ${miss[0].label.replace(/ \(.*\)/, "").toLowerCase()}.`; return }
+      if (s <= n) {
+        const q = Q[s - 1], v = state.a[q.id];
+        if (q.req && (q.type === "multi" ? !(Array.isArray(v) && v.length) : !v)) { err.textContent = q.type === "multi" ? "Choisissez au moins une réponse." : "Choisissez une réponse."; return }
       }
-      if (s === P.length + 1) {
+      if (s === n + 1) {
         if (state.name.trim().length < 2) { err.textContent = "Indiquez votre nom pour que l’on sache qui rappeler."; return }
         if (state.phone.replace(/\D/g, "").length < 8) { err.textContent = "Indiquez un numéro de téléphone complet, avec l’indicatif du pays."; return }
       }
-      state.step++; renderForm();
-      if (card.getBoundingClientRect().top < 0) card.scrollIntoView({ block: "start" });
+      next();
     });
 
     renderForm();

@@ -1,127 +1,200 @@
 ---
-/* Simulateur de budget par ville (acheter, louer, investir, coup de fusil).
-   Un seul simulateur par page. Sur /simulateur, l'adresse peut préciser ?ville=netanya&mode=achat */
-import { CITIES, REGIONS } from "../data/cities";
-import { waLink } from "../data/site";
+/* Simulateur étape par étape : une question par écran, passage automatique à l'étape suivante,
+   puis un résultat détaillé (prix, frais, taxe d'achat, prêt, rendement, plus-value).
+   `mode` choisit le projet d'avance. L'adresse peut aussi préciser ?mode=achat&ville=netanya&surface=100 */
 export type SimMode = "achat" | "location" | "invest" | "flip";
 interface Props { mode?: SimMode; city?: string }
-const { mode = "achat", city = "netanya" } = Astro.props;
-const MODES: [SimMode, string][] = [["achat", "Acheter"], ["location", "Louer"], ["invest", "Investir"], ["flip", "Rénover & revendre"]];
+const { mode, city } = Astro.props;
 ---
-<div class="sim" id="simBlock" data-mode={mode} data-city={city}>
-  <div class="card">
-    <div class="field">
-      <span class="lbl" id="simModeLbl">Type de projet</span>
-      <div class="seg" id="simMode" role="group" aria-labelledby="simModeLbl">
-        {MODES.map(([m, l]) => <button type="button" data-mode={m} aria-pressed={m === mode ? "true" : "false"}>{l}</button>)}
-      </div>
-    </div>
-    <div class="field">
-      <label for="simCity">Ville</label>
-      <select id="simCity">
-        {REGIONS.map((r) => <optgroup label={r}>{CITIES.filter((c) => c.region === r).map((c) => <option value={c.id} selected={c.id === city}>{c.name}</option>)}</optgroup>)}
-      </select>
-    </div>
-    <div class="field">
-      <div class="range-row"><label for="simSize">Surface</label><output id="simSizeOut" for="simSize">100 m²</output></div>
-      <input type="range" id="simSize" min="40" max="220" step="5" value="100">
-    </div>
-    <div class="field" id="apportField">
-      <div class="range-row"><label for="simApport">Apport</label><output id="simApportOut" for="simApport">30 %</output></div>
-      <input type="range" id="simApport" min="25" max="100" step="5" value="30">
-    </div>
-  </div>
-  <div class="card results" aria-live="polite">
-    <div class="big" id="simBig"></div>
-    <div class="bars" id="simBars"></div>
-    <div class="sim-cta">
-      <div><b>Un vrai chiffrage, bien par bien ?</b><span>Un conseiller vous répond en français sur WhatsApp.</span></div>
-      <a class="btn btn-wa" id="simWa" href={waLink()} target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa" /></svg>Recevoir une étude</a>
-    </div>
-    <p class="note" id="simNote"></p>
-    <div class="cities" id="cityChips">
-      <span class="region">Comparer rapidement</span>
-      {CITIES.map((c) => <button type="button" data-city={c.id} aria-pressed={c.id === city ? "true" : "false"} class={c.id === city ? "on" : undefined}>{c.name}</button>)}
-    </div>
+<div class="simw" id="simw" data-mode={mode} data-city={city}>
+  <div class="form-card simw-card">
+    <div class="progress" id="simProgress" aria-hidden="true"></div>
+    <div id="simBody" aria-live="polite"><noscript>Le simulateur a besoin de JavaScript.</noscript></div>
   </div>
 </div>
 
 <script>
-  import { CITIES, RENO_M2, FLIP_DISCOUNT, FLIP_PREMIUM, FEES, RATE, YEARS } from "../data/cities";
-  import { fmt, shek, shekK } from "../lib/format";
+  import { CITIES, REGIONS } from "../data/cities";
+  import * as H from "../data/hypotheses";
+  import { compute, SITUATIONS, minApport, monthly, pct, sum, type Line, type Mode, type Reno, type Situation } from "../lib/simulate";
+  import { fmt, shek, shekK, esc } from "../lib/format";
   import { waLink } from "../data/site";
 
-  const root = document.getElementById("simBlock");
+  const root = document.getElementById("simw");
   if (root) {
-    const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+    const body = document.getElementById("simBody")!, bar = document.getElementById("simProgress")!;
+    interface S { mode?: Mode; city?: string; surface?: number; situation?: Situation; reno?: Reno; apport?: number; years?: number }
+    const st: S = {};
     const params = new URLSearchParams(location.search);
-    const modes = ["achat", "location", "invest", "flip"];
-    const sim = {
-      mode: modes.includes(params.get("mode") || "") ? params.get("mode")! : root.dataset.mode!,
-      city: CITIES.some((c) => c.id === params.get("ville")) ? params.get("ville")! : root.dataset.city!,
-    };
-    const surface = +(params.get("surface") || 0);
-    const citySel = $<HTMLSelectElement>("simCity"), sizeIn = $<HTMLInputElement>("simSize"), apportIn = $<HTMLInputElement>("simApport");
-    const rate = String(RATE * 100).replace(".", ",");
-    if (surface >= 40 && surface <= 220) sizeIn.value = String(Math.round(surface / 5) * 5);
-    const MODE_LABEL: Record<string, string> = { achat: "acheter", location: "louer", invest: "investir dans le locatif", flip: "une opération achat‑rénovation‑revente" };
+    const modes: Mode[] = ["achat", "location", "invest", "flip"];
+    const qm = params.get("mode") as Mode, qc = params.get("ville"), qs = +(params.get("surface") || 0);
+    st.mode = modes.includes(qm) ? qm : (root.dataset.mode as Mode) || undefined;
+    if (CITIES.some((c) => c.id === qc)) st.city = qc!;
+    else if (root.dataset.city && st.mode) st.city = root.dataset.city;
+    if (qs >= 40 && qs <= 220 && st.city) st.surface = Math.round(qs / 5) * 5;
 
-    const monthly = (principal: number) => { const r = RATE / 12, n = YEARS * 12; return principal * r / (1 - Math.pow(1 + r, -n)) };
-    const bar = (label: string, val: number, max: number, cls = "") => {
-      const w = Math.max(2, Math.min(100, Math.abs(val) / max * 100));
-      return `<div class="bar"><span>${label}</span><div class="track"><div class="fill ${cls}" style="width:${w}%"></div></div><span>${shekK(val)}</span></div>`;
+    const MODE_INFO: Record<Mode, { label: string; sub: string; verb: string }> = {
+      achat: { label: "Acheter pour y vivre", sub: "Prix, frais, taxe d’achat et mensualité", verb: "acheter" },
+      location: { label: "Louer un logement", sub: "Loyer, charges et budget de l’année", verb: "louer" },
+      invest: { label: "Acheter pour louer", sub: "Rendement brut et net, cash‑flow mensuel", verb: "investir dans le locatif" },
+      flip: { label: "Acheter, rénover, revendre", sub: "Travaux, frais et plus‑value estimée", verb: "une opération de rénovation‑revente" },
     };
+    const SIZES = [
+      { v: 70, label: "2‑3 pièces", sub: "Environ 70 m²" },
+      { v: 100, label: "4 pièces", sub: "Environ 100 m²" },
+      { v: 130, label: "5 pièces", sub: "Environ 130 m²" },
+      { v: 170, label: "Maison ou cottage", sub: "Environ 170 m²" },
+    ];
+    const city = () => CITIES.find((c) => c.id === st.city)!;
+    const price = () => city().m2 * (st.surface || 100);
 
-    function renderSim() {
-      const c = CITIES.find((x) => x.id === sim.city)!, s = +sizeIn.value, ap = +apportIn.value / 100;
-      $("simSizeOut").textContent = s + " m²";
-      $("simApportOut").textContent = Math.round(ap * 100) + " %";
-      $("apportField").hidden = sim.mode === "location" || sim.mode === "flip";
-      const big = $("simBig"), bars = $("simBars"), note = $("simNote");
-      const price = c.m2 * s, rent = c.rent * s;
-      if (sim.mode === "achat") {
-        const loan = price * (1 - ap);
-        big.innerHTML = `<div><small>Prix estimé</small><b>${shekK(price)}</b><em>${fmt(c.m2)} ₪ / m²</em></div>
-          <div><small>Apport</small><b>${shekK(price * ap)}</b><em>${Math.round(ap * 100)} % du prix</em></div>
-          <div><small>Mensualité</small><b>${shek(monthly(loan))}</b><em>sur ${YEARS} ans</em></div>`;
-        bars.innerHTML = bar("Apport", price * ap, price) + bar("Prêt", loan, price, "soft");
-        note.textContent = (c.avg ? `Prix moyen d’un appartement vendu à ${c.name} : ${shekK(c.avg)} (Bureau central des statistiques, fin 2025). ` : "") + `Prix au m² estimé à partir de cette moyenne. Hypothèse de prêt : taux ${rate} % sur ${YEARS} ans. Les banques israéliennes prêtent en général jusqu’à 75 % pour une résidence principale, moins pour un non‑résident. La taxe d’achat (Mas Rechisha) bénéficie d’un barème spécifique pour les olim sous conditions : notre avocat la calcule pour votre cas.`;
-      } else if (sim.mode === "location") {
-        big.innerHTML = `<div><small>Loyer estimé</small><b>${shek(rent)}</b><em>par mois</em></div>
-          <div><small>Prix au m²</small><b>${fmt(c.rent)} ₪</b><em>par mois</em></div>
-          <div><small>Budget annuel</small><b>${shekK(rent * 12)}</b><em>hors charges</em></div>`;
-        bars.innerHTML = bar("Loyer mensuel", rent, rent * 1.4) + bar("Arnona + Vaad (estim.)", s * 9, rent * 1.4, "soft");
-        note.textContent = "Loyer hors arnona (taxe municipale) et vaad bayit (charges d’immeuble), qui varient selon la ville et l’immeuble. Ordres de grandeur indicatifs.";
-      } else if (sim.mode === "invest") {
-        const y = rent * 12 / price, loan = price * (1 - ap), m = monthly(loan);
-        big.innerHTML = `<div><small>Prix estimé</small><b>${shekK(price)}</b><em>${fmt(c.m2)} ₪ / m²</em></div>
-          <div><small>Loyer attendu</small><b>${shek(rent)}</b><em>par mois</em></div>
-          <div><small>Rendement brut</small><b>${(y * 100).toFixed(1).replace(".", ",")} %</b><em>par an</em></div>`;
-        bars.innerHTML = bar("Loyer mensuel", rent, Math.max(rent, m)) + bar("Mensualité prêt", m, Math.max(rent, m), "soft") + bar("Écart / mois", rent - m, Math.max(rent, m), rent - m >= 0 ? "gain" : "soft");
-        note.textContent = (c.avg ? `Prix moyen d’un appartement vendu à ${c.name} : ${shekK(c.avg)} (CBS, fin 2025). ` : "") + `Loyers estimés. Rendement brut = loyers annuels ÷ prix, avant charges et impôts. Le Sud et le Nord offrent en général un meilleur rendement, le Centre une meilleure valorisation. Hypothèse de prêt : ${rate} % sur ${YEARS} ans.`;
-      } else {
-        const buy = price * (1 - FLIP_DISCOUNT), works = RENO_M2 * s, sale = price * (1 + FLIP_PREMIUM), fees = (buy + sale) * FEES / 2;
-        const gain = sale - buy - works - fees;
-        big.innerHTML = `<div><small>Achat du bien à rénover</small><b>${shekK(buy)}</b><em>−${Math.round(FLIP_DISCOUNT * 100)} % vs marché</em></div>
-          <div><small>Revente après travaux</small><b>${shekK(sale)}</b><em>environ 6 à 9 mois</em></div>
-          <div><small>Plus‑value brute</small><b style="color:${gain >= 0 ? "var(--wa)" : "#C4323A"}">${shekK(gain)}</b><em>${(gain / (buy + works + fees) * 100).toFixed(0)} % du capital engagé</em></div>`;
-        bars.innerHTML = bar("Achat", buy, sale) + bar("Architecte + travaux", works, sale, "soft") + bar("Frais (avocat, taxes…)", fees, sale, "soft") + bar("Plus‑value", gain, sale, "gain");
-        note.textContent = (gain < 0 ? `À ${c.name}, avec ces hypothèses, l’opération n’est pas rentable : le prix de revente ne couvre pas l’achat, les travaux et les frais. C’est exactement ce que notre étude vérifie avant tout achat. ` : "") + `Hypothèses de démonstration : travaux complets ${fmt(RENO_M2)} ₪/m², décote d’achat ${Math.round(FLIP_DISCOUNT * 100)} %, prime de revente ${Math.round(FLIP_PREMIUM * 100)} %, frais ${Math.round(FEES * 100)} %. Chaque opération fait l’objet d’une étude chiffrée avant l’achat.`;
+    // Étapes selon le projet.
+    type Step = "mode" | "city" | "surface" | "situation" | "reno" | "apport" | "years";
+    const steps = (): Step[] => {
+      const m = st.mode ?? "achat"; // tant que le projet n'est pas choisi, on compte le parcours le plus fréquent
+      const s: Step[] = ["mode", "city", "surface"];
+      if (m !== "location") s.push("situation");
+      if (m === "flip") s.push("reno");
+      if (m === "achat" || m === "invest") { s.push("apport"); if ((st.apport ?? 0) < 1) s.push("years") }
+      return s;
+    };
+    const answered = (k: Step) => st[k] !== undefined;
+    const firstOpen = (): Step | "result" => steps().find((k) => !answered(k)) || "result";
+    let cur: Step | "result" = firstOpen();
+
+    const opt = (value: string, label: string, pressed: boolean, sub = "", side = "") =>
+      `<button type="button" class="opt" data-v="${esc(value)}" aria-pressed="${pressed}"><span class="opt-mark"></span><span class="opt-text"><b>${label}</b>${sub ? `<small>${sub}</small>` : ""}</span>${side ? `<span class="opt-side">${side}</span>` : ""}</button>`;
+
+    function stepHTML(k: Step): [string, string, string] {
+      if (k === "mode") return ["Votre projet", "Que souhaitez‑vous faire ?", `<div class="opts">${modes.map((m) => opt(m, MODE_INFO[m].label, st.mode === m, MODE_INFO[m].sub)).join("")}</div>`];
+      if (k === "city") return ["La ville", "Dans quelle ville ?", REGIONS.map((r) => `<p class="opts-group">${r}</p><div class="opts opts-3">${CITIES.filter((c) => c.region === r).map((c) => opt(c.id, c.name, st.city === c.id, st.mode === "location" ? `≈ ${fmt(c.rent)} ₪/m² par mois` : `≈ ${fmt(c.m2)} ₪/m²`)).join("")}</div>`).join("")];
+      if (k === "surface") return ["Le logement", "Quelle taille de logement ?", `<div class="opts">${SIZES.map((z) => opt(String(z.v), z.label, st.surface === z.v, z.sub, st.mode === "location" ? `≈ ${shek(city().rent * z.v)} / mois` : `≈ ${shekK(city().m2 * z.v)}`)).join("")}</div>`];
+      if (k === "situation") return ["Votre situation", "Quelle est votre situation ?", `<p class="q-help">Elle détermine la taxe d’achat et la part que la banque peut financer.</p><div class="opts opts-1">${SITUATIONS.map((s) => opt(s.id, s.label, st.situation === s.id, s.sub)).join("")}</div>`];
+      if (k === "reno") return ["Les travaux", "Quel niveau de travaux ?", `<div class="opts opts-1">${(Object.keys(H.RENO) as Reno[]).map((r) => opt(r, H.RENO[r].label, st.reno === r, `${H.RENO[r].sub} · environ ${fmt(H.RENO[r].m2)} ₪/m²`, `≈ ${shekK(H.RENO[r].m2 * (st.surface || 100))}`)).join("")}</div>`];
+      if (k === "apport") {
+        const min = minApport(st.situation || "resident");
+        const list = [0.25, 0.3, 0.4, 0.5, 0.75, 1].filter((a) => a >= min - 1e-9);
+        return ["Le financement", "Quel apport personnel ?", `<p class="q-help">Pour votre situation, les banques financent au maximum ${pct(1 - min)} du prix : l’apport minimum est de ${pct(min)}.</p><div class="opts">${list.map((a) => opt(String(a), a === 1 ? "Achat comptant" : `${pct(a)} du prix`, st.apport === a, a === 1 ? "Sans prêt immobilier" : `Prêt de ${shekK(price() * (1 - a))}`, shekK(price() * a))).join("")}</div>`];
       }
-      citySel.value = sim.city;
-      ($("simWa") as HTMLAnchorElement).href = waLink(`Bonjour, j’ai utilisé votre simulateur : je souhaite ${MODE_LABEL[sim.mode]} à ${c.name}, environ ${s} m². Pouvez‑vous m’envoyer une étude détaillée ?`);
-      root!.querySelectorAll<HTMLButtonElement>("#simMode button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === sim.mode)));
-      root!.querySelectorAll<HTMLButtonElement>("#cityChips button").forEach((b) => {
-        const on = b.dataset.city === sim.city;
-        b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on));
-      });
+      return ["Le financement", "Sur combien d’années ?", `<p class="q-help">Taux moyen retenu : ${pct(H.LOAN_RATE, 1)}.</p><div class="opts">${H.LOAN_YEARS.map((y) => opt(String(y), `${y} ans`, st.years === y, "", `${shek(monthly(price() * (1 - (st.apport ?? 0.3)), y))} / mois`)).join("")}</div>`];
     }
 
-    root.querySelectorAll<HTMLButtonElement>("#simMode button").forEach((b) => b.addEventListener("click", () => { sim.mode = b.dataset.mode!; renderSim() }));
-    root.querySelectorAll<HTMLButtonElement>("#cityChips button").forEach((b) => b.addEventListener("click", () => { sim.city = b.dataset.city!; renderSim() }));
-    citySel.addEventListener("change", () => { sim.city = citySel.value; renderSim() });
-    sizeIn.addEventListener("input", renderSim);
-    apportIn.addEventListener("input", renderSim);
-    renderSim();
+    function setAnswer(k: Step, v: string) {
+      if (k === "mode") { if (st.mode !== v) { st.mode = v as Mode; delete st.situation; delete st.reno; delete st.apport; delete st.years } }
+      else if (k === "city") st.city = v;
+      else if (k === "surface") st.surface = +v;
+      else if (k === "situation") { st.situation = v as Situation; if ((st.apport ?? 1) < minApport(st.situation)) delete st.apport }
+      else if (k === "reno") st.reno = v as Reno;
+      else if (k === "apport") { st.apport = +v; if (st.apport >= 1) st.years = st.years ?? 25 }
+      else st.years = +v;
+    }
+
+    function go(k: Step | "result") {
+      cur = k; render();
+      const top = root!.getBoundingClientRect().top;
+      if (top < 70 || top > innerHeight * 0.6) root!.scrollIntoView({ block: "start" });
+    }
+
+    function render() {
+      const list = steps();
+      const done = cur === "result" ? list.length : list.indexOf(cur as Step);
+      bar.innerHTML = `<i style="width:${Math.max(4, Math.round((done / list.length) * 100))}%"></i>`;
+      root!.classList.toggle("is-result", cur === "result");
+      if (cur === "result") { body.innerHTML = resultHTML(); bindResult(); return }
+      const k = cur as Step, i = list.indexOf(k);
+      const [kicker, title, html] = stepHTML(k);
+      body.innerHTML = `<p class="kicker">${kicker} · étape ${i + 1} sur ${list.length}</p><h3 class="q-title">${title}</h3>${html}
+        <div class="form-nav">${i > 0 ? `<button type="button" class="btn btn-ghost" id="simBack">Retour</button>` : "<span></span>"}${answered(k) ? `<button type="button" class="btn btn-primary" id="simNext">Continuer</button>` : ""}</div>`;
+      // Un clic sur une réponse l'enregistre et passe à l'étape suivante.
+      body.querySelectorAll<HTMLButtonElement>(".opt").forEach((b) => (b.onclick = () => {
+        setAnswer(k, b.dataset.v!);
+        body.querySelectorAll(".opt").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+        setTimeout(() => go(firstOpen()), 180);
+      }));
+      document.getElementById("simBack")?.addEventListener("click", () => go(list[i - 1]));
+      document.getElementById("simNext")?.addEventListener("click", () => go(i + 1 < steps().length ? steps()[i + 1] : "result"));
+    }
+
+    /* ---------- Résultat ---------- */
+    const row = (l: Line) => `<tr${l.strong ? ' class="strong"' : ""}><th scope="row">${l.label}${l.note ? `<small>${l.note}</small>` : ""}</th><td>${l.neg ? "− " : ""}${shek(l.value)}</td></tr>`;
+    const table = (title: string, lines: Line[], total?: Line) => `<div class="res-block"><h4>${title}</h4><table class="res-table"><tbody>${lines.map(row).join("")}${total ? row({ ...total, strong: true }) : ""}</tbody></table></div>`;
+    const kpi = (label: string, value: string, sub = "", tone = "") => `<div class="kpi${tone ? " " + tone : ""}"><small>${label}</small><b>${value}</b>${sub ? `<span>${sub}</span>` : ""}</div>`;
+
+    function summaryText() {
+      const c = city(), m = MODE_INFO[st.mode!];
+      const lines = [`Bonjour, j’ai utilisé votre simulateur : je souhaite ${m.verb} à ${c.name}, environ ${st.surface} m².`];
+      if (st.situation) lines.push(`Situation : ${SITUATIONS.find((s) => s.id === st.situation)!.label}.`);
+      if (st.apport !== undefined) lines.push(`Apport : ${pct(st.apport)}${st.apport < 1 ? `, prêt sur ${st.years} ans` : ""}.`);
+      if (st.reno) lines.push(`Travaux : ${H.RENO[st.reno].label.toLowerCase()}.`);
+      lines.push("Pouvez‑vous m’envoyer une étude détaillée ?");
+      return lines.join("\n");
+    }
+
+    function resultHTML() {
+      const c = city();
+      const r: any = compute({ mode: st.mode!, city: c, surface: st.surface!, situation: st.situation || "resident", apport: st.apport ?? 1, years: st.years ?? 25, reno: st.reno || "full" });
+      const chips = steps().map((k) => {
+        const val = k === "mode" ? MODE_INFO[st.mode!].label : k === "city" ? c.name : k === "surface" ? `${st.surface} m²` : k === "situation" ? SITUATIONS.find((s) => s.id === st.situation)!.label : k === "reno" ? H.RENO[st.reno!].label : k === "apport" ? (st.apport! >= 1 ? "Achat comptant" : `Apport ${pct(st.apport!)}`) : `Prêt sur ${st.years} ans`;
+        return `<button type="button" class="res-chip" data-step="${k}" title="Modifier">${val}</button>`;
+      }).join("");
+      let kpis = "", blocks = "", note = "";
+      if (st.mode === "achat" || st.mode === "invest") {
+        const fin: Line[] = [{ label: "Prix estimé du bien", value: r.price, note: `${fmt(c.m2)} ₪/m² × ${st.surface} m²` }, { label: "Apport personnel", value: r.apport, note: pct(st.apport!) }];
+        if (r.loan > 0) fin.push({ label: "Montant du prêt", value: r.loan }, { label: "Mensualité du prêt", value: r.pay, note: `${st.years} ans à ${pct(H.LOAN_RATE, 1)}` });
+        blocks += table("Le financement", fin);
+        blocks += table("Les frais d’achat", r.fees, { label: "Total des frais", value: sum(r.fees) });
+        blocks += table("À prévoir de votre poche", [{ label: "Apport", value: r.apport }, { label: "Frais d’achat", value: sum(r.fees) }], { label: "Total", value: r.cash });
+        if (st.mode === "achat") {
+          kpis = kpi("Prix estimé", shekK(r.price), `${c.name} · ${st.surface} m²`) + kpi("Budget à prévoir", shekK(r.cash), "apport + frais d’achat", "blue") + kpi("Mensualité", r.loan > 0 ? shek(r.pay) : "—", r.loan > 0 ? `sur ${st.years} ans` : "achat comptant");
+          if (r.loan > 0) note = `Les banques demandent en général que la mensualité ne dépasse pas environ un tiers de vos revenus nets, soit ici des revenus d’au moins ${shek(r.pay * 3)} par mois. `;
+        } else {
+          blocks += table("Les revenus locatifs (par an)", [{ label: "Loyers", value: r.yearRent, note: `${shek(r.rent)} par mois` }, ...r.charges], { label: "Revenu net", value: r.net });
+          kpis = kpi("Rendement brut", pct(r.gross, 1), "loyers ÷ prix") + kpi("Rendement net", pct(r.netYield, 1), "après charges et frais", "blue") + kpi("Cash‑flow mensuel", (r.cashflow >= 0 ? "+ " : "− ") + shek(Math.abs(r.cashflow)), r.loan > 0 ? "revenu net − mensualité" : "revenu net par mois", r.cashflow >= 0 ? "good" : "bad");
+          note = "Impôt sur les loyers non inclus : plusieurs régimes existent, notre avocat vous indique le plus avantageux. ";
+        }
+        if (r.lowApport) note = `Attention : pour votre situation, l’apport minimum est de ${pct(minApport(st.situation!))}. ` + note;
+      } else if (st.mode === "location") {
+        kpis = kpi("Loyer estimé", shek(r.rent), "par mois") + kpi("Total mensuel", shek(r.monthTotal), "loyer + arnona + charges", "blue") + kpi("Budget annuel", shekK(r.year), "hors garanties");
+        blocks += table("Chaque mois", [{ label: "Loyer", value: r.rent, note: `${fmt(c.rent)} ₪/m² × ${st.surface} m²` }, { label: "Arnona (taxe municipale)", value: r.arnona, note: "estimation, varie selon la ville" }, { label: "Vaad bayit (charges d’immeuble)", value: r.vaad, note: "estimation" }], { label: "Total par mois", value: r.monthTotal });
+        blocks += `<div class="res-block"><h4>À l’entrée dans les lieux</h4><ul class="ticks res-list"><li>Premier mois de loyer, parfois plusieurs mois d’avance</li><li>Garanties demandées par le propriétaire : chèques de garantie ou garantie bancaire, montant variable</li><li>Honoraires d’agence si vous passez par une agence (usage : un mois de loyer + TVA)</li></ul></div>`;
+      } else {
+        kpis = kpi("Plus‑value estimée", (r.gain >= 0 ? "+ " : "− ") + shekK(Math.abs(r.gain)), "avant impôt sur la plus‑value", r.gain >= 0 ? "good" : "bad") + kpi("Rentabilité", pct(r.ratio), "du capital engagé", "blue") + kpi("Durée indicative", H.RENO[st.reno!].months, H.RENO[st.reno!].label.toLowerCase());
+        blocks += table("L’achat", [{ label: "Prix d’achat du bien à rénover", value: r.buy, note: `${pct(H.FLIP_DISCOUNT)} sous le prix du marché` }, ...r.fees], { label: "Total achat", value: r.buy + sum(r.fees) });
+        blocks += table("Les travaux", [{ label: H.RENO[st.reno!].label, value: r.works, note: `${fmt(H.RENO[st.reno!].m2)} ₪/m² × ${st.surface} m²` }]);
+        blocks += table("La revente", [{ label: "Prix de revente estimé", value: r.sale, note: `${pct(H.FLIP_PREMIUM)} au‑dessus du prix du marché` }, ...r.saleFees.map((l: Line) => ({ ...l, neg: true }))], { label: "Plus‑value avant impôt", value: r.gain });
+        note = (r.gain < 0 ? `À ${c.name}, avec ces hypothèses, l’opération n’est pas rentable : c’est exactement ce que notre étude vérifie avant tout achat. ` : "") + "L’impôt sur la plus‑value (Mas Shevach) n’est pas inclus : il dépend de votre situation et est calculé par notre avocat. ";
+      }
+      const surfAdj = `<label class="adj"><span>Surface <output id="adjSurfOut">${st.surface} m²</output></span><input type="range" id="adjSurf" min="40" max="220" step="5" value="${st.surface}"></label>`;
+      const apAdj = st.mode === "achat" || st.mode === "invest"
+        ? `<label class="adj"><span>Apport <output id="adjApOut">${pct(st.apport!)}</output></span><input type="range" id="adjAp" min="${Math.round(minApport(st.situation!) * 100)}" max="100" step="5" value="${Math.round(st.apport! * 100)}"></label>` : "";
+      return `<div class="res">
+        <div class="res-head"><div><p class="kicker">Votre estimation</p><h3 class="q-title" style="margin-bottom:0">${MODE_INFO[st.mode!].label} à ${c.name}</h3></div>
+          <button type="button" class="link-btn" id="simRestart">Recommencer</button></div>
+        <div class="res-chips"><span>Vos réponses (cliquez pour modifier) :</span>${chips}</div>
+        <div class="kpis">${kpis}</div>
+        <div class="res-grid">
+          <div class="res-main">${blocks}</div>
+          <aside class="res-side">
+            <div class="res-card"><h4>Ajuster</h4>${surfAdj}${apAdj}</div>
+            <div class="res-card res-cta"><h4>Un chiffrage précis, bien par bien</h4><p>Un conseiller francophone vérifie ces chiffres avec vous : prix réels du quartier, taux obtenus auprès des banques, taxes calculées par notre avocat.</p>
+              <a class="btn btn-wa" href="${esc(waLink(summaryText()))}" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa"/></svg>Recevoir une étude</a></div>
+          </aside>
+        </div>
+        <p class="note">${note}Chiffres indicatifs : prix au m² et loyers estimés${c.avg ? ` (prix moyen d’un appartement à ${c.name} : ${shekK(c.avg)}, CBS fin 2025)` : ""}, taxe d’achat selon le barème en vigueur jusqu’en janvier 2028, autres frais selon les usages.</p>
+      </div>`;
+    }
+
+    function bindResult() {
+      body.querySelectorAll<HTMLButtonElement>(".res-chip").forEach((b) => (b.onclick = () => go(b.dataset.step as Step)));
+      document.getElementById("simRestart")!.onclick = () => { for (const k of Object.keys(st)) delete (st as Record<string, unknown>)[k]; go("mode") };
+      const surf = document.getElementById("adjSurf") as HTMLInputElement | null, ap = document.getElementById("adjAp") as HTMLInputElement | null;
+      const refresh = (focusId: string) => { const y = scrollY; body.innerHTML = resultHTML(); bindResult(); scrollTo(0, y); (document.getElementById(focusId) as HTMLInputElement | null)?.focus({ preventScroll: true }) };
+      surf?.addEventListener("input", () => { document.getElementById("adjSurfOut")!.textContent = surf.value + " m²" });
+      surf?.addEventListener("change", () => { st.surface = +surf.value; refresh("adjSurf") });
+      ap?.addEventListener("input", () => { document.getElementById("adjApOut")!.textContent = ap.value + " %" });
+      ap?.addEventListener("change", () => { st.apport = +ap.value / 100; if (st.apport < 1 && !st.years) st.years = 25; refresh("adjAp") });
+    }
+
+    render();
   }
 </script>

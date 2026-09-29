@@ -112,10 +112,4 @@ export const PROFILE: [string, keyof City][] = [
   ["Programmes neufs", "neuf"], ["Maisons et cottages", "house"],
 ];
 
-/* ---------- Hypothèses du simulateur (à valider) ---------- */
-export const RENO_M2 = 3800;        // coût travaux complet / m²
-export const FLIP_DISCOUNT = 0.14;  // décote d'achat d'un bien à rénover
-export const FLIP_PREMIUM = 0.06;   // prime d'un bien entièrement refait
-export const FEES = 0.07;           // frais achat + vente : avocat, taxes, courtage
-export const RATE = 0.045;          // taux du prêt
-export const YEARS = 25;            // durée du prêt
+/* Les hypothèses du simulateur (taxes, taux, frais, travaux) sont dans src/data/hypotheses.ts. */
