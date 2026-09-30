@@ -20,6 +20,8 @@ const { mode, city } = Astro.props;
   import { fmt, shek, shekK, esc } from "../lib/format";
   import { waLink } from "../data/site";
   import { contactError, leadFailMessage, sendLead } from "../lib/send-lead";
+  import type { SimAnalysis } from "../lib/sim-analyse";
+  import { SIM_TIPS, SIM_WAIT_MS, aiWaitHTML, bindAiRead, bindAiWait, deskOpen, shuffle, simStages } from "../lib/ai-wait";
 
   const root = document.getElementById("simw");
   if (root) {
@@ -62,7 +64,7 @@ const { mode, city } = Astro.props;
     };
     const answered = (k: Step) => k === "contact" ? !!st.contactDone : st[k] !== undefined;
     const firstOpen = (): Step | "result" => steps().find((k) => !answered(k)) || "result";
-    let cur: Step | "result" = firstOpen();
+    let cur: Step | "result" | "wait" = firstOpen();
 
     const opt = (value: string, label: string, pressed: boolean, sub = "", side = "") =>
       `<button type="button" class="opt" data-v="${esc(value)}" aria-pressed="${pressed}"><span class="opt-mark"></span><span class="opt-text"><b>${label}</b>${sub ? `<small>${sub}</small>` : ""}</span>${side ? `<span class="opt-side">${side}</span>` : ""}</button>`;
@@ -97,18 +99,29 @@ const { mode, city } = Astro.props;
       else if (k === "years") st.years = +v;
     }
 
-    function go(k: Step | "result") {
+    function go(k: Step | "result" | "wait") {
       cur = k; render();
       const top = root!.getBoundingClientRect().top;
       if (top < 70 || top > innerHeight * 0.6) root!.scrollIntoView({ block: "start" });
     }
 
     function render() {
+      stopWait?.(); stopWait = null;
       const list = steps();
-      const done = cur === "result" ? list.length : list.indexOf(cur as Step);
+      const done = cur === "result" || cur === "wait" ? list.length : list.indexOf(cur as Step);
       bar.innerHTML = `<i style="width:${Math.max(4, Math.round((done / list.length) * 100))}%"></i>`;
       root!.classList.toggle("is-result", cur === "result");
-      if (cur === "result") { body.innerHTML = resultHTML(); bindResult(); if (st.contactDone) void pushLead(); return }
+      root!.classList.toggle("is-wait", cur === "wait");
+      if (cur === "wait") { body.innerHTML = waitHTML(); bindWait(); return }
+      if (cur === "result") {
+        body.innerHTML = resultHTML(); bindResult();
+        if (pendingAnalysis) aiZone(aiHTML(pendingAnalysis));
+        else if (aiStatus === "off") aiZone("");
+        else if (aiStatus === "fail") aiFail();
+        else void runAI(true);
+        if (st.contactDone) void pushLead();
+        return;
+      }
       const k = cur as Step, i = list.indexOf(k);
       const [kicker, title, html] = stepHTML(k);
       if (k === "contact") {
@@ -123,10 +136,18 @@ const { mode, city } = Astro.props;
       body.querySelectorAll<HTMLButtonElement>(".opt").forEach((b) => (b.onclick = () => {
         setAnswer(k, b.dataset.v!);
         body.querySelectorAll(".opt").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-        setTimeout(() => go(firstOpen()), 180);
+        setTimeout(() => {
+          const next = firstOpen();
+          if (next === "result") void openResult();
+          else go(next);
+        }, 180);
       }));
       document.getElementById("simBack")?.addEventListener("click", () => go(list[i - 1]));
-      document.getElementById("simNext")?.addEventListener("click", () => go(i + 1 < steps().length ? steps()[i + 1] : "result"));
+      document.getElementById("simNext")?.addEventListener("click", () => {
+        const next = i + 1 < steps().length ? steps()[i + 1] : "result";
+        if (next === "result") void openResult();
+        else go(next);
+      });
     }
 
     let leadKey = "";
@@ -164,13 +185,163 @@ const { mode, city } = Astro.props;
         const status = await pushLead();
         if (status !== "ok") { err.textContent = leadFailMessage(status); btn.disabled = false; return }
         st.contactDone = true;
-        go("result");
+        void openResult();
       };
+    }
+
+    /* ---------- Analyse rédigée par l'IA (route serveur /api/conseil) ---------- */
+    const AI_STORE = "cc-sim-analyse-v1";
+    let aiAvailable: Promise<boolean> | null = fetch("/api/conseil").then((r) => (r.ok ? r.json() : { enabled: false })).then((j) => !!j.enabled).catch(() => false);
+    let aiCtl: AbortController | null = null;
+    let pendingAnalysis: SimAnalysis | null = null;
+    let aiStatus: "idle" | "ready" | "off" | "fail" = "idle";
+    let stopWait: (() => void) | null = null;
+    let waitLaunched = false;
+    const simInput = () => ({ mode: st.mode, city: st.city, surface: st.surface, situation: st.situation, apport: st.apport ?? 1, years: st.years ?? 25, reno: st.reno });
+    const simKey = () => JSON.stringify(simInput());
+    const cachedAI = (): SimAnalysis | null => {
+      try { const c = JSON.parse(sessionStorage.getItem(AI_STORE) || "null"); return c && c.key === simKey() ? c.analysis : null } catch { return null }
+    };
+    const aiHead = `<p class="kicker">Analyse de votre projet</p>`;
+    let currentTips: string[] = SIM_TIPS.slice();
+    let aiError = "default";
+    const freshTips = () => (currentTips = shuffle(SIM_TIPS));
+    function waitHTML() {
+      const tips = freshTips();
+      return aiWaitHTML({
+        kicker: "Analyse de votre projet",
+        title: `Nous analysons votre projet à ${city().name}`,
+        lead: "Vos chiffres sont prêts. Un conseiller virtuel les lit et rédige une analyse personnalisée — une dizaine de secondes.",
+        stages: simStages(city().name),
+        firstTip: tips[0],
+      }) + `<div class="form-nav"><span></span><button type="button" class="link-btn" id="simWaitRestart">Recommencer</button></div>`;
+    }
+    function compactWaitHTML() {
+      const tips = freshTips();
+      return aiWaitHTML({
+        kicker: "Analyse de votre projet",
+        title: "Nouvelle analyse en cours",
+        lead: "Nous relisons vos chiffres actualisés. Quelques secondes encore.",
+        stages: simStages(city().name),
+        firstTip: tips[0],
+        compact: true,
+      });
+    }
+    function bindWait() {
+      stopWait = bindAiWait(body, currentTips);
+      document.getElementById("simWaitRestart")?.addEventListener("click", () => {
+        aiCtl?.abort();
+        const keep = { name: st.name, email: st.email, phone: st.phone, leadId: st.leadId, contactDone: true };
+        for (const k of Object.keys(st)) delete (st as Record<string, unknown>)[k];
+        Object.assign(st, keep); leadKey = ""; pendingAnalysis = null; aiStatus = "idle"; go("mode");
+      });
+      if (!waitLaunched) { waitLaunched = true; void finishWait() }
+    }
+    async function openResult() {
+      pendingAnalysis = cachedAI();
+      if (pendingAnalysis) { aiStatus = "ready"; go("result"); return }
+      waitLaunched = false;
+      go("wait");
+    }
+    async function finishWait() {
+      if (!(await aiAvailable!)) { aiStatus = "off"; if (cur === "wait") go("result"); return }
+      const key = simKey();
+      aiCtl?.abort();
+      const ctl = new AbortController();
+      aiCtl = ctl;
+      const t = window.setTimeout(() => ctl.abort(), SIM_WAIT_MS);
+      try {
+        const res = await fetch("/api/conseil", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sim: simInput() }), signal: ctl.signal });
+        const j = await res.json().catch(() => ({}));
+        if (key !== simKey() || cur !== "wait") return;
+        if (res.ok && j.analysis) {
+          pendingAnalysis = j.analysis as SimAnalysis;
+          try { sessionStorage.setItem(AI_STORE, JSON.stringify({ key, analysis: pendingAnalysis })) } catch {}
+          aiStatus = "ready";
+        } else if (j.error === "disabled") {
+          pendingAnalysis = null; aiStatus = "off";
+        } else {
+          pendingAnalysis = null; aiStatus = "fail"; aiError = j.error || "default";
+        }
+      } catch (e) {
+        if (cur !== "wait") return;
+        pendingAnalysis = null; aiStatus = "fail";
+        aiError = (e as Error).name === "AbortError" ? "timeout" : "default";
+      } finally {
+        window.clearTimeout(t);
+      }
+      if (cur === "wait") go("result");
+    }
+    function aiZone(html: string) {
+      const zone = document.getElementById("simAi"); if (!zone) return;
+      stopWait?.(); stopWait = null;
+      zone.hidden = !html; zone.innerHTML = html;
+      if (zone.querySelector("#aiWait")) stopWait = bindAiWait(zone, currentTips);
+      else bindAiRead(zone);
+      document.getElementById("simAiRun")?.addEventListener("click", () => runAI(true, true));
+    }
+    function aiFail() {
+      const msg = aiError === "rate_limited"
+        ? "Trop de demandes pour le moment. Réessayez dans quelques minutes."
+        : aiError === "timeout"
+          ? "L’analyse met plus de temps que prévu. Vos chiffres sont prêts ci‑dessous."
+          : "L’analyse n’a pas pu être rédigée.";
+      aiZone(`${aiHead}<p class="warn">${msg} <button type="button" class="link-btn" id="simAiRun">Réessayer</button></p>`);
+    }
+    function aiHTML(an: SimAnalysis) {
+      const cards = (xs: string[]) => xs.map((x) => `<li>${esc(x)}</li>`).join("");
+      const fold = (title: string, xs: string[], kind: string, wide = false) => xs.length
+        ? `<details class="ai-fold${wide ? " ai-fold-wide" : ""}"${deskOpen()}><summary><b>${title}</b><small>${xs.length}</small></summary><ul class="ai-cards ${kind}">${cards(xs)}</ul></details>`
+        : "";
+      return `${aiHead}<div class="ai-read"><p class="ai-synth">${esc(an.synthese)}</p><button type="button" class="ai-more" hidden>Lire la suite</button></div>
+        <div class="ai-folds">${fold("Points forts", an.forces, "plus")}${fold("Vigilance", an.vigilance, "minus")}${fold("Pour avancer", an.conseils, "next", true)}</div>
+        <p class="note">Un conseiller vérifie cette analyse avec vous.</p>`;
+    }
+    /** `auto` : lancé à l'affichage du résultat. Après un réglage, on attend un clic pour ménager le quota. */
+    async function runAI(auto: boolean, force = false) {
+      if (!document.getElementById("simAi")) return;
+      const hit = force ? null : cachedAI();
+      if (hit) return aiZone(aiHTML(hit));
+      aiAvailable ||= fetch("/api/conseil").then((r) => (r.ok ? r.json() : { enabled: false })).then((j) => !!j.enabled).catch(() => false);
+      if (!(await aiAvailable)) return aiZone("");
+      if (!auto && !force) return aiZone(`${aiHead}<p>Vous avez modifié la simulation. <button type="button" class="link-btn" id="simAiRun">Analyser ces nouveaux chiffres</button></p>`);
+      const key = simKey();
+      aiZone(compactWaitHTML());
+      aiCtl?.abort();
+      const ctl = new AbortController();
+      aiCtl = ctl;
+      const t = window.setTimeout(() => ctl.abort(), SIM_WAIT_MS);
+      let error = "default";
+      try {
+        const res = await fetch("/api/conseil", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sim: simInput() }), signal: ctl.signal });
+        const j = await res.json().catch(() => ({}));
+        if (key !== simKey()) return;
+        if (res.ok && j.analysis) {
+          pendingAnalysis = j.analysis as SimAnalysis;
+          try { sessionStorage.setItem(AI_STORE, JSON.stringify({ key, analysis: pendingAnalysis })) } catch {}
+          aiStatus = "ready";
+          return aiZone(aiHTML(pendingAnalysis));
+        }
+        if (j.error === "disabled") return aiZone("");
+        error = j.error || "default";
+      } catch (e) {
+        if ((e as Error).name === "AbortError" && key !== simKey()) return;
+      } finally {
+        window.clearTimeout(t);
+      }
+      aiError = error;
+      aiZone(`${aiHead}<p class="warn">${error === "rate_limited" ? "Trop de demandes pour le moment. Réessayez dans quelques minutes." : "L’analyse n’a pas pu être rédigée."} <button type="button" class="link-btn" id="simAiRun">Réessayer</button></p>`);
     }
 
     /* ---------- Résultat ---------- */
     const row = (l: Line) => `<tr${l.strong ? ' class="strong"' : ""}><th scope="row">${l.label}${l.note ? `<small>${l.note}</small>` : ""}</th><td>${l.neg ? "− " : ""}${shek(l.value)}</td></tr>`;
-    const table = (title: string, lines: Line[], total?: Line) => `<div class="res-block"><h4>${title}</h4><table class="res-table"><tbody>${lines.map(row).join("")}${total ? row({ ...total, strong: true }) : ""}</tbody></table></div>`;
+    // Détails repliables : ouverts sur ordinateur, repliés sur téléphone (le total reste visible).
+    const openAttr = () => (matchMedia("(min-width: 901px)").matches ? " open" : "");
+    const block = (title: string, inner: string, sum = "") =>
+      `<details class="res-block"${openAttr()}><summary><h4>${title}</h4>${sum ? `<span class="res-sum">${sum}</span>` : ""}</summary>${inner}</details>`;
+    const table = (title: string, lines: Line[], total?: Line) =>
+      block(title, `<table class="res-table"><tbody>${lines.map(row).join("")}${total ? row({ ...total, strong: true }) : ""}</tbody></table>`, total ? shek(total.value) : "");
+    const fill = (v: number, min: number, max: number) => `${max > min ? ((v - min) / (max - min)) * 100 : 100}%`;
     const kpi = (label: string, value: string, sub = "", tone = "") => `<div class="kpi${tone ? " " + tone : ""}"><small>${label}</small><b>${value}</b>${sub ? `<span>${sub}</span>` : ""}</div>`;
 
     function summaryText() {
@@ -210,7 +381,7 @@ const { mode, city } = Astro.props;
       } else if (st.mode === "location") {
         kpis = kpi("Loyer estimé", shek(r.rent), "par mois") + kpi("Total mensuel", shek(r.monthTotal), "loyer + arnona + charges", "blue") + kpi("Budget annuel", shekK(r.year), "hors garanties");
         blocks += table("Chaque mois", [{ label: "Loyer", value: r.rent, note: `${fmt(c.rent)} ₪/m² × ${st.surface} m²` }, { label: "Arnona (taxe municipale)", value: r.arnona, note: "estimation, varie selon la ville" }, { label: "Vaad bayit (charges d’immeuble)", value: r.vaad, note: "estimation" }], { label: "Total par mois", value: r.monthTotal });
-        blocks += `<div class="res-block"><h4>À l’entrée dans les lieux</h4><ul class="ticks res-list"><li>Premier mois de loyer, parfois plusieurs mois d’avance</li><li>Garanties demandées par le propriétaire : chèques de garantie ou garantie bancaire, montant variable</li><li>Honoraires d’agence si vous passez par une agence (usage : un mois de loyer + TVA)</li></ul></div>`;
+        blocks += block("À l’entrée dans les lieux", `<ul class="ticks res-list"><li>Premier mois de loyer, parfois plusieurs mois d’avance</li><li>Garanties demandées par le propriétaire : chèques de garantie ou garantie bancaire, montant variable</li><li>Honoraires d’agence si vous passez par une agence (usage : un mois de loyer + TVA)</li></ul>`);
       } else {
         kpis = kpi("Plus‑value estimée", (r.gain >= 0 ? "+ " : "− ") + shekK(Math.abs(r.gain)), "avant impôt sur la plus‑value", r.gain >= 0 ? "good" : "bad") + kpi("Rentabilité", pct(r.ratio), "du capital engagé", "blue") + kpi("Durée indicative", H.RENO[st.reno!].months, H.RENO[st.reno!].label.toLowerCase());
         blocks += table("L’achat", [{ label: "Prix d’achat du bien à rénover", value: r.buy, note: `${pct(H.FLIP_DISCOUNT)} sous le prix du marché` }, ...r.fees], { label: "Total achat", value: r.buy + sum(r.fees) });
@@ -218,23 +389,30 @@ const { mode, city } = Astro.props;
         blocks += table("La revente", [{ label: "Prix de revente estimé", value: r.sale, note: `${pct(H.FLIP_PREMIUM)} au‑dessus du prix du marché` }, ...r.saleFees.map((l: Line) => ({ ...l, neg: true }))], { label: "Plus‑value avant impôt", value: r.gain });
         note = (r.gain < 0 ? `À ${c.name}, avec ces hypothèses, l’opération n’est pas rentable : c’est exactement ce que notre étude vérifie avant tout achat. ` : "") + "L’impôt sur la plus‑value (Mas Shevach) n’est pas inclus : il dépend de votre situation et est calculé par notre avocat. ";
       }
-      const surfAdj = `<label class="adj"><span>Surface <output id="adjSurfOut">${st.surface} m²</output></span><input type="range" id="adjSurf" min="40" max="220" step="5" value="${st.surface}"></label>`;
+      const surfAdj = `<label class="adj"><span>Surface <output id="adjSurfOut">${st.surface} m²</output></span><input type="range" id="adjSurf" min="40" max="220" step="5" value="${st.surface}" style="--p:${fill(st.surface!, 40, 220)}"></label>`;
+      const apMin = Math.round(minApport(st.situation || "resident") * 100), apVal = Math.round((st.apport ?? 1) * 100);
       const apAdj = st.mode === "achat" || st.mode === "invest"
-        ? `<label class="adj"><span>Apport <output id="adjApOut">${pct(st.apport!)}</output></span><input type="range" id="adjAp" min="${Math.round(minApport(st.situation!) * 100)}" max="100" step="5" value="${Math.round(st.apport! * 100)}"></label>` : "";
+        ? `<label class="adj"><span>Apport <output id="adjApOut">${pct(st.apport!)}</output></span><input type="range" id="adjAp" min="${apMin}" max="100" step="5" value="${apVal}" style="--p:${fill(apVal, apMin, 100)}"></label>` : "";
+      const wa = esc(waLink(summaryText()));
       return `<div class="res">
-        <div class="res-head"><div><p class="kicker">Votre estimation</p><h3 class="q-title" style="margin-bottom:0">${MODE_INFO[st.mode!].label} à ${c.name}</h3></div>
-          <button type="button" class="link-btn" id="simRestart">Recommencer</button></div>
-        <div class="res-chips"><span>Vos réponses (cliquez pour modifier) :</span>${chips}</div>
+        <div class="res-head"><div><p class="kicker">Votre estimation</p><h3 class="res-title">${MODE_INFO[st.mode!].label} à ${c.name}</h3></div>
+          <button type="button" class="btn btn-ghost btn-sm res-restart" id="simRestart">Recommencer</button></div>
+        <div class="res-chips" aria-label="Vos réponses, touchez pour modifier"><span>Vos réponses, cliquez pour modifier :</span>${chips}</div>
         <div class="kpis">${kpis}</div>
+        <div class="sim-ai" id="simAi" aria-live="polite" hidden></div>
         <div class="res-grid">
-          <div class="res-main">${blocks}</div>
+          <div class="res-main">
+            <h4 class="res-detail-title">Le détail du calcul</h4>
+            ${blocks}
+            <details class="res-legal"><summary>À propos de ces chiffres</summary><p class="note">${note}Chiffres indicatifs : prix au m² et loyers estimés${c.avg ? ` (prix moyen d’un appartement à ${c.name} : ${shekK(c.avg)}, CBS fin 2025)` : ""}, taxe d’achat selon le barème en vigueur jusqu’en janvier 2028, autres frais selon les usages.</p></details>
+          </div>
           <aside class="res-side">
-            <div class="res-card"><h4>Ajuster</h4>${surfAdj}${apAdj}</div>
+            <div class="res-card res-adj"><h4>Ajuster la simulation</h4>${surfAdj}${apAdj}</div>
             <div class="res-card res-cta"><h4>Un chiffrage précis, bien par bien</h4><p>Vos coordonnées sont enregistrées. Un conseiller francophone vérifie ces chiffres avec vous : prix réels du quartier, taux obtenus auprès des banques, taxes calculées par notre avocat.</p>
-              <a class="btn btn-wa" href="${esc(waLink(summaryText()))}" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa"/></svg>Recevoir une étude</a></div>
+              <a class="btn btn-wa" href="${wa}" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa"/></svg>Recevoir une étude</a></div>
           </aside>
         </div>
-        <p class="note">${note}Chiffres indicatifs : prix au m² et loyers estimés${c.avg ? ` (prix moyen d’un appartement à ${c.name} : ${shekK(c.avg)}, CBS fin 2025)` : ""}, taxe d’achat selon le barème en vigueur jusqu’en janvier 2028, autres frais selon les usages.</p>
+        <div class="res-sticky"><a class="btn btn-wa" href="${wa}" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa"/></svg>Recevoir une étude détaillée</a></div>
       </div>`;
     }
 
@@ -244,13 +422,20 @@ const { mode, city } = Astro.props;
         // Nouvelle simulation = nouvelle demande, mais on garde les coordonnées déjà saisies.
         const keep = { name: st.name, email: st.email, phone: st.phone };
         for (const k of Object.keys(st)) delete (st as Record<string, unknown>)[k];
-        Object.assign(st, keep); leadKey = ""; go("mode");
+        Object.assign(st, keep); leadKey = ""; pendingAnalysis = null; aiStatus = "idle"; go("mode");
       };
       const surf = document.getElementById("adjSurf") as HTMLInputElement | null, ap = document.getElementById("adjAp") as HTMLInputElement | null;
-      const refresh = (focusId: string) => { const y = scrollY; body.innerHTML = resultHTML(); bindResult(); void pushLead(); scrollTo(0, y); (document.getElementById(focusId) as HTMLInputElement | null)?.focus({ preventScroll: true }) };
-      surf?.addEventListener("input", () => { document.getElementById("adjSurfOut")!.textContent = surf.value + " m²" });
+      const refresh = (focusId: string) => {
+        const y = scrollY, opened = [...body.querySelectorAll<HTMLDetailsElement>("details.res-block")].map((d) => d.open);
+        body.innerHTML = resultHTML(); bindResult();
+        body.querySelectorAll<HTMLDetailsElement>("details.res-block").forEach((d, i) => { if (i < opened.length) d.open = opened[i] });
+        runAI(false); void pushLead(); scrollTo(0, y);
+        (document.getElementById(focusId) as HTMLInputElement | null)?.focus({ preventScroll: true });
+      };
+      const paint = (i: HTMLInputElement) => i.style.setProperty("--p", fill(+i.value, +i.min, +i.max));
+      surf?.addEventListener("input", () => { paint(surf); document.getElementById("adjSurfOut")!.textContent = surf.value + " m²" });
       surf?.addEventListener("change", () => { st.surface = +surf.value; refresh("adjSurf") });
-      ap?.addEventListener("input", () => { document.getElementById("adjApOut")!.textContent = ap.value + " %" });
+      ap?.addEventListener("input", () => { paint(ap); document.getElementById("adjApOut")!.textContent = ap.value + " %" });
       ap?.addEventListener("change", () => { st.apport = +ap.value / 100; if (st.apport < 1 && !st.years) st.years = 25; refresh("adjAp") });
     }
 

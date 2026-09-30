@@ -1,6 +1,7 @@
-/* Analyse détaillée des villes rédigée par l'IA à partir des réponses du questionnaire alyah.
+/* Analyses rédigées par l'IA.
    - GET  → { enabled } : l'analyse n'est proposée que si une clé d'IA est configurée.
-   - POST → { answers } : renvoie { analysis } (voir src/lib/analyse.ts) ou { error }.
+   - POST → { answers } (questionnaire alyah, voir src/lib/analyse.ts)
+            ou { sim } (résultat du simulateur, voir src/lib/sim-analyse.ts) : renvoie { analysis } ou { error }.
    Fournisseur : Gemini (GEMINI_API_KEY, offre gratuite de Google AI Studio) s'il est configuré, sinon Claude (ANTHROPIC_API_KEY).
    Protection anti-abus : le prompt est construit ici à partir de réponses vérifiées (impossible d'envoyer
    un texte libre à l'IA), limite de demandes par adresse IP et plafond quotidien. */
@@ -8,6 +9,7 @@ import type { APIRoute } from "astro";
 import Anthropic from "@anthropic-ai/sdk";
 import { sanitizeOlimAnswers } from "../../lib/recommend";
 import { ANALYSIS_SCHEMA, analysisPrompt, parseAnalysis } from "../../lib/analyse";
+import { SIM_SCHEMA, parseSimAnalysis, sanitizeSimAnswers, simPrompt } from "../../lib/sim-analyse";
 
 export const prerender = false;
 
@@ -44,40 +46,76 @@ const json = (body: unknown, status = 200) =>
 
 class RateLimited extends Error {}
 
-/** Gemini (API REST de Google AI Studio). Modèle modifiable avec GEMINI_MODEL. */
-async function askGemini(key: string, prompt: string, signal: AbortSignal): Promise<string> {
-  const model = env("GEMINI_MODEL") || "gemini-2.5-flash";
-  const call = (withSchema: boolean) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+/** Gemini (Interactions API de Google AI Studio). On essaie les modèles de gauche à droite ;
+    si l’un est indisponible, saturé ou renvoie une réponse vide, on passe au suivant. */
+const MODELS = ["gemini-3.1-flash-lite", "gemini-3-flash-preview", "gemini-3.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-flash"];
+
+async function askGemini(key: string, prompt: string, schema: object, signal: AbortSignal): Promise<string> {
+  const models = [...new Set([env("GEMINI_MODEL"), ...MODELS].filter((m): m is string => !!m))];
+  const call = (model: string, withSchema: boolean) => fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
     method: "POST",
     signal,
     headers: { "content-type": "application/json", "x-goog-api-key": key },
     body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.3,
-        responseMimeType: "application/json",
-        ...(withSchema ? { responseJsonSchema: ANALYSIS_SCHEMA } : {}),
-      },
+      model,
+      input: prompt,
+      store: false,
+      generation_config: { temperature: 0.3 },
+      response_format: { type: "text", mime_type: "application/json", ...(withSchema ? { schema } : {}) },
     }),
   });
-  let res = await call(true);
-  // Certains modèles n'acceptent pas le schéma : on redemande sans (le prompt décrit déjà le format).
-  if (res.status === 400) res = await call(false);
-  if (res.status === 429) throw new RateLimited();
-  if (!res.ok) throw new Error(`Gemini ${res.status} ${(await res.text()).slice(0, 300)}`);
-  const data = await res.json();
-  const parts: { text?: string; thought?: boolean }[] = data?.candidates?.[0]?.content?.parts || [];
-  return parts.filter((p) => !p.thought).map((p) => p.text || "").join("");
+  const readText = (data: { steps?: { type?: string; content?: { type?: string; text?: string }[] }[] }) =>
+    (data?.steps || []).filter((s) => s.type === "model_output").flatMap((s) => s.content || []).map((c) => c.text || "").join("");
+  let lastErr = "Gemini : aucun modèle n’a répondu";
+  let only429 = true;
+  for (const model of models) {
+    if (signal.aborted) throw new Error("aborted");
+    try {
+      let res = await call(model, true);
+      // Certains modèles n'acceptent pas le schéma : on redemande sans (le prompt décrit déjà le format).
+      if (res.status === 400) res = await call(model, false);
+      if (res.status === 503) {
+        await new Promise((r) => setTimeout(r, 1500));
+        if (signal.aborted) throw new Error("aborted");
+        res = await call(model, true);
+      }
+      if (res.status === 429) {
+        lastErr = `Gemini ${model} 429`;
+        console.warn(`[api/conseil] Gemini ${model} quota atteint, essai du modèle suivant`);
+        continue;
+      }
+      only429 = false;
+      if (!res.ok) {
+        lastErr = `Gemini ${model} ${res.status} ${(await res.text()).slice(0, 200)}`;
+        console.warn(`[api/conseil] Gemini ${model} indisponible (${res.status}), essai du modèle suivant`);
+        continue;
+      }
+      const text = readText(await res.json());
+      if (text.trim()) {
+        console.info(`[api/conseil] Gemini ${model} ok`);
+        return text;
+      }
+      lastErr = `Gemini ${model} réponse vide`;
+      console.warn(`[api/conseil] Gemini ${model} réponse vide, essai du modèle suivant`);
+    } catch (e) {
+      if (signal.aborted || (e as Error).name === "AbortError") throw e;
+      only429 = false;
+      lastErr = e instanceof Error ? e.message : String(e);
+      console.warn(`[api/conseil] Gemini ${model} erreur, essai du modèle suivant :`, lastErr);
+    }
+  }
+  if (only429) throw new RateLimited();
+  throw new Error(lastErr);
 }
 
 /** Claude (API Anthropic), sortie JSON contrainte par le schéma. */
-async function askClaude(key: string, prompt: string, signal: AbortSignal): Promise<string> {
+async function askClaude(key: string, prompt: string, schema: Record<string, unknown>, signal: AbortSignal): Promise<string> {
   const client = new Anthropic({ apiKey: key });
   try {
     const msg = await client.beta.messages.create({
       model: CLAUDE_MODEL,
       max_tokens: 16000,
-      output_config: { effort: "low", format: { type: "json_schema", schema: ANALYSIS_SCHEMA } },
+      output_config: { effort: "low", format: { type: "json_schema", schema } },
       // Si la demande est refusée par les filtres de sécurité, l'API la relance sur un autre modèle.
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
@@ -103,18 +141,25 @@ export const POST: APIRoute = async ({ request, clientAddress, url }) => {
 
   const raw = await request.text();
   if (raw.length > LIMITS.maxBodyBytes) return json({ error: "invalid" }, 413);
-  let answers;
-  try { answers = sanitizeOlimAnswers(JSON.parse(raw).answers) } catch { answers = null }
-  if (!answers) return json({ error: "invalid" }, 400);
+  let body: Record<string, unknown> = {};
+  try { body = JSON.parse(raw) || {} } catch { body = {} }
+  let job: { prompt: string; schema: Record<string, unknown>; parse: (t: string) => unknown } | null = null;
+  if (body.sim !== undefined) {
+    const sim = sanitizeSimAnswers(body.sim);
+    if (sim) job = { prompt: simPrompt(sim), schema: SIM_SCHEMA, parse: parseSimAnalysis };
+  } else {
+    const answers = sanitizeOlimAnswers(body.answers);
+    if (answers) job = { prompt: analysisPrompt(answers), schema: ANALYSIS_SCHEMA, parse: parseAnalysis };
+  }
+  if (!job) return json({ error: "invalid" }, 400);
 
   let ip = "inconnue";
   try { ip = clientAddress } catch { ip = request.headers.get("x-forwarded-for")?.split(",")[0].trim() || ip }
   if (!allow(ip)) return json({ error: "rate_limited" }, 429);
 
-  const prompt = analysisPrompt(answers);
   try {
-    const text = gKey ? await askGemini(gKey, prompt, request.signal) : await askClaude(cKey!, prompt, request.signal);
-    const analysis = parseAnalysis(text);
+    const text = gKey ? await askGemini(gKey, job.prompt, job.schema, request.signal) : await askClaude(cKey!, job.prompt, job.schema, request.signal);
+    const analysis = job.parse(text);
     if (!analysis) {
       console.error("[api/conseil] réponse illisible :", text.slice(0, 500));
       return json({ error: "default" }, 502);

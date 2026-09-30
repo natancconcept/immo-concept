@@ -21,6 +21,7 @@ const { goal, readQuery = false } = Astro.props;
   import { CITIES } from "../data/cities";
   import { fmt, esc } from "../lib/format";
   import { contactError, leadFailMessage, sendLead } from "../lib/send-lead";
+  import { OLIM_STAGES, OLIM_TIPS, OLIM_WAIT_MS, aiWaitHTML, bindAiRead, bindAiWait, deskOpen, shuffle } from "../lib/ai-wait";
 
   const card = document.getElementById("formCard");
   const form = document.getElementById("leadForm") as HTMLFormElement | null;
@@ -51,6 +52,17 @@ const { goal, readQuery = false } = Astro.props;
       : []);
     const qLabel = (q: Question) => q.label.replace(/ \(plusieurs choix possibles\)/, "");
     let lastReco: Reco[] = [], lastAnalysis: Analysis | null = null;
+    let aiSettled = false, aiBusy = false, aiGen = 0, stopWait: (() => void) | null = null;
+    let currentTips: string[] = OLIM_TIPS.slice();
+    if (state.goal === "olim") {
+      try {
+        const c = JSON.parse(sessionStorage.getItem("cc-analyse-v1") || "null");
+        if (c && c.key === JSON.stringify(state.a) && c.analysis) {
+          lastAnalysis = c.analysis;
+          aiSettled = true;
+        }
+      } catch {}
+    }
 
     function setProgress(n: number) {
       const pct = state.goal ? Math.min(100, Math.round((state.step / (n + 1)) * 100)) : 4;
@@ -73,6 +85,7 @@ const { goal, readQuery = false } = Astro.props;
     }
 
     function renderForm() {
+      stopWait?.(); stopWait = null;
       const Q = questions(), n = Q.length;
       if (state.step > n + 2) state.step = n + 2;
       const s = state.step;
@@ -104,6 +117,9 @@ const { goal, readQuery = false } = Astro.props;
       }
       form!.innerHTML = h;
       bindForm();
+      const wait = form!.querySelector("#aiWait");
+      if (wait) stopWait = bindAiWait(form!, currentTips);
+      else if (form!.querySelector(".ai-synth, .ai-fold")) bindAiRead(form!);
       save();
     }
 
@@ -126,11 +142,20 @@ const { goal, readQuery = false } = Astro.props;
 
     function resultHTML() {
       const first = esc(state.name.trim().split(" ")[0]);
+      if (state.goal === "olim" && !aiSettled) {
+        currentTips = shuffle(OLIM_TIPS);
+        return aiWaitHTML({
+          kicker: "Analyse personnalisée",
+          title: `${state.name.trim().split(" ")[0] || "Vous"}, nous comparons les villes pour vous`,
+          lead: "Nous lisons votre profil et nos fiches villes (prix, communauté, écoles, santé). Une vingtaine de secondes.",
+          stages: OLIM_STAGES,
+          firstTip: currentTips[0],
+        }) + `<div class="form-nav"><span></span><button type="button" class="link-btn" id="restart">Recommencer</button></div>`;
+      }
+      lastReco = recommend(state.a);
       let h = "";
       if (state.goal === "olim") {
-        lastReco = recommend(state.a);
-        h += `<div id="aiZone" aria-live="polite"><p class="kicker">Votre analyse personnalisée</p><h3>${first}, nous analysons votre profil…</h3>
-          <div class="ai-loading"><span class="spin" aria-hidden="true"></span><p>Nous comparons vos réponses avec nos fiches villes (prix, communauté, écoles, santé, emploi). Cela prend une vingtaine de secondes.</p></div></div>`;
+        h += `<div id="aiZone" aria-live="polite">${lastAnalysis ? analysisHTML(lastAnalysis) : localHTML()}</div>`;
       } else {
         h += `<h3>Merci ${first}, votre demande est prête.</h3><div class="summary">${esc(summaryText())}</div>`;
       }
@@ -159,29 +184,34 @@ const { goal, readQuery = false } = Astro.props;
 
     /** Analyse détaillée rédigée par l'IA. Tout le texte de l'IA est échappé. */
     function analysisHTML(an: Analysis) {
-      const li = (xs: string[]) => xs.map((x) => `<li>${esc(x)}</li>`).join("");
+      const cards = (xs: string[]) => xs.map((x) => `<li>${esc(x)}</li>`).join("");
       return `<p class="kicker">Votre analyse personnalisée</p><h3>${firstName()}, voici les villes qui vous correspondent le mieux.</h3>
-        ${an.synthese ? `<p class="ai-synth">${esc(an.synthese)}</p>` : ""}
+        ${an.synthese ? `<div class="ai-read"><p class="ai-synth">${esc(an.synthese)}</p><button type="button" class="ai-more" hidden>Lire la suite</button></div>` : ""}
         <div class="recos">` + an.villes.map((v, i) => {
           const c = CITIES.find((x) => x.id === v.id)!;
           return `<article class="reco${i === 0 ? " best" : ""}">
-            <div class="reco-head"><div><b><a href="/villes/${c.id}">${c.name}</a></b><span>${c.region}${v.verdict ? " · " + esc(v.verdict) : ""}</span></div><div class="match"><strong>${v.pct} %</strong><small>compatibilité</small></div></div>
+            <div class="reco-head"><div><b><a href="/villes/${c.id}">${c.name}</a></b><span>${c.region}</span></div><div class="match"><strong>${v.pct} %</strong><small>compatibilité</small></div></div>
             <div class="meter"><i style="width:${v.pct}%"></i></div>
-            <div class="reco-cols">
-              ${v.forces.length ? `<div><p class="reco-sub">Points forts pour vous</p><ul>${li(v.forces)}</ul></div>` : ""}
-              ${v.limites.length ? `<div><p class="reco-sub">Points de vigilance</p><ul class="minus">${li(v.limites)}</ul></div>` : ""}
-            </div>
-            ${v.quartiers.length ? `<p class="reco-meta"><b>Quartiers conseillés :</b> ${esc(v.quartiers.join(", "))}</p>` : ""}
-            ${v.budget ? `<p class="reco-meta"><b>Budget :</b> ${esc(v.budget)}</p>` : ""}
+            ${v.verdict ? `<p class="reco-verdict">${esc(v.verdict)}</p>` : ""}
+            <details class="reco-more"${deskOpen()}>
+              <summary>Pourquoi ${c.name}</summary>
+              <div class="reco-cols">
+                ${v.forces.length ? `<div><p class="reco-sub">Points forts</p><ul class="ai-cards plus">${cards(v.forces)}</ul></div>` : ""}
+                ${v.limites.length ? `<div><p class="reco-sub">Vigilance</p><ul class="ai-cards minus">${cards(v.limites)}</ul></div>` : ""}
+              </div>
+              ${v.quartiers.length ? `<p class="reco-meta"><b>Quartiers :</b> ${esc(v.quartiers.join(", "))}</p>` : ""}
+              ${v.budget ? `<p class="reco-meta"><b>Budget :</b> ${esc(v.budget)}</p>` : ""}
+            </details>
           </article>`;
         }).join("") + `</div>
-        ${an.conseils.length ? `<div class="ai-tips"><p class="reco-sub">Nos conseils pour votre installation</p><ul>${li(an.conseils)}</ul></div>` : ""}
-        <p class="note">Analyse rédigée par l’IA à partir de vos réponses et de nos fiches villes. Les prix sont des estimations indicatives ; un conseiller vérifie et complète cette analyse avec vous.</p>
+        ${an.conseils.length ? `<details class="ai-fold ai-fold-wide"${deskOpen()}><summary><b>Pour votre installation</b><small>${an.conseils.length}</small></summary><ul class="ai-cards next">${cards(an.conseils)}</ul></details>` : ""}
+        <p class="note">Un conseiller vérifie et complète cette analyse avec vous.</p>
         <div class="ai-actions"><button type="button" class="link-btn" id="aiRedo">Relancer l’analyse</button></div>`;
     }
 
     /* ---------- Conseil rédigé par l'IA (route serveur /api/conseil) ---------- */
-    let aiAvailable: Promise<boolean> | null = null, aiCtl: AbortController | null = null;
+    let aiAvailable: Promise<boolean> | null = fetch("/api/conseil").then((r) => (r.ok ? r.json() : { enabled: false })).then((j) => !!j.enabled).catch(() => false);
+    let aiCtl: AbortController | null = null;
     const AI_STORE = "cc-analyse-v1";
     const AI_ERRORS: Record<string, string> = {
       rate_limited: "Trop de demandes pour le moment : voici notre classement calculé. Vous pourrez relancer l’analyse détaillée dans quelques minutes.",
@@ -196,36 +226,60 @@ const { goal, readQuery = false } = Astro.props;
     function showZone(html: string) {
       const zone = document.getElementById("aiZone"); if (!zone) return;
       zone.innerHTML = html;
+      bindAiRead(zone);
       const wa = document.getElementById("waBtn") as HTMLAnchorElement | null;
       if (wa) wa.href = waLink(summaryText());
       const redo = document.getElementById("aiRedo"), retry = document.getElementById("aiRetry");
-      if (redo) redo.onclick = () => runAI(true);
-      if (retry) retry.onclick = () => runAI(true);
+      if (redo) redo.onclick = () => void runAI(true);
+      if (retry) retry.onclick = () => void runAI(true);
     }
 
     async function runAI(force = false) {
-      const zone = document.getElementById("aiZone"); if (!zone) return;
-      lastAnalysis = force ? null : cached();
-      if (lastAnalysis) return showZone(analysisHTML(lastAnalysis));
-      aiAvailable ||= fetch("/api/conseil").then((r) => (r.ok ? r.json() : { enabled: false })).then((j) => !!j.enabled).catch(() => false);
-      if (!(await aiAvailable)) return showZone(localHTML());
-      if (force) showZone(`<p class="kicker">Votre analyse personnalisée</p><h3>${firstName()}, nous analysons votre profil…</h3><div class="ai-loading"><span class="spin" aria-hidden="true"></span><p>Nouvelle analyse en cours…</p></div>`);
-      aiCtl?.abort(); aiCtl = new AbortController();
-      let error = "default";
+      if (aiBusy && !force) return;
+      const gen = ++aiGen;
+      aiBusy = true;
       try {
-        const res = await fetch("/api/conseil", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ answers: state.a }), signal: aiCtl.signal });
-        const j = await res.json().catch(() => ({}));
-        if (res.ok && j.analysis) {
-          lastAnalysis = j.analysis as Analysis;
-          try { sessionStorage.setItem(AI_STORE, JSON.stringify({ key: answersKey(), analysis: lastAnalysis })) } catch {}
-          return showZone(analysisHTML(lastAnalysis));
+        if (!force) {
+          lastAnalysis = cached();
+          if (lastAnalysis) { aiSettled = true; renderForm(); return }
+          if (!(await aiAvailable!)) { lastAnalysis = null; aiSettled = true; renderForm(); return }
+        } else {
+          lastAnalysis = null;
+          aiSettled = false;
+          renderForm();
+          if (!(await aiAvailable!)) { lastAnalysis = null; aiSettled = true; renderForm(); return }
         }
-        if (j.error === "disabled") return showZone(localHTML());
-        error = j.error || "default";
-      } catch (e) {
-        if ((e as Error).name === "AbortError") return;
+        if (gen !== aiGen) return;
+        aiCtl?.abort();
+        const ctl = new AbortController();
+        aiCtl = ctl;
+        const t = window.setTimeout(() => ctl.abort(), OLIM_WAIT_MS);
+        let error = "default";
+        try {
+          const res = await fetch("/api/conseil", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ answers: state.a }), signal: ctl.signal });
+          const j = await res.json().catch(() => ({}));
+          if (gen !== aiGen) return;
+          if (res.ok && j.analysis) {
+            lastAnalysis = j.analysis as Analysis;
+            try { sessionStorage.setItem(AI_STORE, JSON.stringify({ key: answersKey(), analysis: lastAnalysis })) } catch {}
+            aiSettled = true;
+            return renderForm();
+          }
+          if (j.error === "disabled") { lastAnalysis = null; aiSettled = true; return renderForm() }
+          error = j.error || "default";
+        } catch (e) {
+          if ((e as Error).name === "AbortError" && gen !== aiGen) return;
+        } finally {
+          window.clearTimeout(t);
+        }
+        if (gen !== aiGen) return;
+        lastAnalysis = null;
+        aiSettled = true;
+        renderForm();
+        showZone(localHTML(`<p class="warn">${AI_ERRORS[error] || AI_ERRORS.default} <button type="button" class="link-btn" id="aiRetry">Réessayer</button></p>`));
+      } finally {
+        if (gen === aiGen) aiBusy = false;
       }
-      showZone(localHTML(`<p class="warn">${AI_ERRORS[error] || AI_ERRORS.default} <button type="button" class="link-btn" id="aiRetry">Réessayer</button></p>`));
     }
 
     function bindForm() {
@@ -257,14 +311,16 @@ const { goal, readQuery = false } = Astro.props;
       const on = (id: string, fn: () => void) => { const el = document.getElementById(id); if (el) el.onclick = fn };
       on("back", () => { state.step--; renderForm() });
       on("skip", () => next());
-      on("editAns", () => { state.step = 1; renderForm() });
-      on("restart", () => { state = blank(); lastReco = []; lastAnalysis = null; renderForm() });
+      on("editAns", () => { state.step = 1; aiSettled = false; lastAnalysis = null; renderForm() });
+      on("restart", () => { aiGen++; aiCtl?.abort(); state = blank(); lastReco = []; lastAnalysis = null; aiSettled = false; aiBusy = false; renderForm() });
       on("copyNum", () => {
         const cp = document.getElementById("copyNum")!;
         const p = navigator.clipboard?.writeText("+" + SITE.whatsapp);
         if (p) p.then(() => (cp.textContent = "Copié"), selectNum); else selectNum();
       });
-      if (document.getElementById("aiZone")) runAI();
+      if (document.getElementById("aiWait") && !aiBusy) void runAI();
+      if (document.getElementById("aiRedo")) document.getElementById("aiRedo")!.onclick = () => void runAI(true);
+      if (document.getElementById("aiRetry")) document.getElementById("aiRetry")!.onclick = () => void runAI(true);
     }
     function selectNum() { const r = document.createRange(); r.selectNodeContents(document.getElementById("waNum")!); const s = getSelection()!; s.removeAllRanges(); s.addRange(r) }
 
@@ -300,6 +356,11 @@ const { goal, readQuery = false } = Astro.props;
           err.textContent = leadFailMessage(status);
           if (btn) btn.disabled = false;
           return;
+        }
+        if (state.goal === "olim") {
+          lastAnalysis = cached();
+          aiSettled = !!lastAnalysis;
+          if (!aiSettled && aiAvailable && !(await aiAvailable)) aiSettled = true;
         }
       }
       next();

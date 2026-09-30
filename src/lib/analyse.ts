@@ -93,17 +93,17 @@ ${cities}
 3. Ne t'appuie que sur les données fournies et sur des faits généraux reconnus sur ces villes. N'invente aucun prix, aucun chiffre, aucun nom d'école : pour les montants, reprends uniquement les estimations fournies en précisant qu'elles sont indicatives.
 
 ## Réponse (en français, JSON conforme au schéma)
-- "synthese" : 3 à 4 phrases qui résument le profil et la recommandation principale.
+- "synthese" : 2 phrases maximum qui résument le profil et la ville principale.
 - "villes" : les 5 villes les plus adaptées, de la plus compatible à la moins compatible. Pour chacune :
-  "id" (identifiant ci‑dessus), "pct" (entier), "verdict" (une phrase), "forces" (2 à 4 points précis liés au profil),
-  "limites" (1 à 3 points, compromis ou vigilance), "quartiers" (2 ou 3 quartiers conseillés pour ce profil, parmi ceux connus de la ville),
-  "budget" (une phrase sur l'adéquation du budget avec l'estimation fournie).
-- "conseils" : 3 ou 4 conseils pratiques pour cette situation (écoles, oulpan, santé, démarches, type de bien).
-Écris « vous » en t'adressant à la personne. Phrases courtes et concrètes, sans formules creuses.`;
+  "id" (identifiant ci‑dessus), "pct" (entier), "verdict" (une phrase courte), "forces" (2 ou 3 points, une phrase de moins de 110 caractères chacun),
+  "limites" (1 ou 2 points, une phrase courte), "quartiers" (2 ou 3 quartiers parmi ceux connus de la ville),
+  "budget" (une phrase courte sur l'adéquation du budget).
+- "conseils" : 3 actions concrètes, chacune une phrase courte (moins de 110 caractères).
+Écris « vous ». Pas de paragraphe long, pas de formule creuse.`;
 }
 
 const clean = (v: unknown, max = 400) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "");
-const cleanList = (v: unknown, n: number) => (Array.isArray(v) ? v.map((x) => clean(x, 240)).filter(Boolean).slice(0, n) : []);
+const cleanList = (v: unknown, n: number) => (Array.isArray(v) ? v.map((x) => clean(x, 140)).filter(Boolean).slice(0, n) : []);
 
 /** Vérifie et normalise la réponse de l'IA. Renvoie null si elle est inutilisable. */
 export function parseAnalysis(raw: string): Analysis | null {
@@ -119,5 +119,5 @@ export function parseAnalysis(raw: string): Analysis | null {
     return [{ id, pct, verdict: clean(v.verdict), forces: cleanList(v.forces, 4), limites: cleanList(v.limites, 3), quartiers: cleanList(v.quartiers, 3), budget: clean(v.budget) }];
   }).sort((x, y) => y.pct - x.pct).slice(0, 5);
   if (villes.length < 3) return null;
-  return { synthese: clean(j.synthese, 900), villes, conseils: cleanList(j.conseils, 4) };
+  return { synthese: clean(j.synthese, 320), villes, conseils: cleanList(j.conseils, 3) };
 }
