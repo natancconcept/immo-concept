@@ -1,15 +1,17 @@
-/* Conseil personnalisé rédigé par l'IA (Claude) à partir des réponses du questionnaire alyah.
-   - GET  → { enabled } : le bouton n'est affiché que si une clé ANTHROPIC_API_KEY est configurée.
-   - POST → { answers } : renvoie le texte en flux, une ligne JSON par morceau ({"t": "..."} ou {"error": "..."}).
+/* Analyse détaillée des villes rédigée par l'IA à partir des réponses du questionnaire alyah.
+   - GET  → { enabled } : l'analyse n'est proposée que si une clé d'IA est configurée.
+   - POST → { answers } : renvoie { analysis } (voir src/lib/analyse.ts) ou { error }.
+   Fournisseur : Gemini (GEMINI_API_KEY, offre gratuite de Google AI Studio) s'il est configuré, sinon Claude (ANTHROPIC_API_KEY).
    Protection anti-abus : le prompt est construit ici à partir de réponses vérifiées (impossible d'envoyer
    un texte libre à l'IA), limite de demandes par adresse IP et plafond quotidien. */
 import type { APIRoute } from "astro";
 import Anthropic from "@anthropic-ai/sdk";
-import { advicePrompt, recommend, sanitizeOlimAnswers } from "../../lib/recommend";
+import { sanitizeOlimAnswers } from "../../lib/recommend";
+import { ANALYSIS_SCHEMA, analysisPrompt, parseAnalysis } from "../../lib/analyse";
 
 export const prerender = false;
 
-const MODEL = "claude-opus-5";
+const CLAUDE_MODEL = "claude-opus-5";
 const LIMITS = {
   perIpWindow: 4,          // demandes par adresse IP…
   windowMs: 10 * 60_000,   // …sur 10 minutes
@@ -18,7 +20,9 @@ const LIMITS = {
   maxBodyBytes: 4_000,
 };
 
-const apiKey = () => process.env.ANTHROPIC_API_KEY || import.meta.env.ANTHROPIC_API_KEY;
+const env = (k: string): string | undefined => process.env[k] || import.meta.env[k];
+const geminiKey = () => env("GEMINI_API_KEY");
+const claudeKey = () => env("ANTHROPIC_API_KEY");
 
 /* Compteurs en mémoire. Sur Netlify / Vercel, chaque instance a les siens : c'est une protection
    de base, suffisante pour un site vitrine. Voir le README pour aller plus loin. */
@@ -38,11 +42,60 @@ function allow(ip: string): boolean {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
 
-export const GET: APIRoute = () => json({ enabled: !!apiKey() });
+class RateLimited extends Error {}
+
+/** Gemini (API REST de Google AI Studio). Modèle modifiable avec GEMINI_MODEL. */
+async function askGemini(key: string, prompt: string, signal: AbortSignal): Promise<string> {
+  const model = env("GEMINI_MODEL") || "gemini-2.5-flash";
+  const call = (withSchema: boolean) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+    method: "POST",
+    signal,
+    headers: { "content-type": "application/json", "x-goog-api-key": key },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.3,
+        responseMimeType: "application/json",
+        ...(withSchema ? { responseJsonSchema: ANALYSIS_SCHEMA } : {}),
+      },
+    }),
+  });
+  let res = await call(true);
+  // Certains modèles n'acceptent pas le schéma : on redemande sans (le prompt décrit déjà le format).
+  if (res.status === 400) res = await call(false);
+  if (res.status === 429) throw new RateLimited();
+  if (!res.ok) throw new Error(`Gemini ${res.status} ${(await res.text()).slice(0, 300)}`);
+  const data = await res.json();
+  const parts: { text?: string; thought?: boolean }[] = data?.candidates?.[0]?.content?.parts || [];
+  return parts.filter((p) => !p.thought).map((p) => p.text || "").join("");
+}
+
+/** Claude (API Anthropic), sortie JSON contrainte par le schéma. */
+async function askClaude(key: string, prompt: string, signal: AbortSignal): Promise<string> {
+  const client = new Anthropic({ apiKey: key });
+  try {
+    const msg = await client.beta.messages.create({
+      model: CLAUDE_MODEL,
+      max_tokens: 16000,
+      output_config: { effort: "low", format: { type: "json_schema", schema: ANALYSIS_SCHEMA } },
+      // Si la demande est refusée par les filtres de sécurité, l'API la relance sur un autre modèle.
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+      messages: [{ role: "user", content: prompt }],
+    }, { signal });
+    if (msg.stop_reason === "refusal") return "";
+    return msg.content.map((b) => (b.type === "text" ? b.text : "")).join("");
+  } catch (e) {
+    if (e instanceof Anthropic.RateLimitError) throw new RateLimited();
+    throw e;
+  }
+}
+
+export const GET: APIRoute = () => json({ enabled: !!(geminiKey() || claudeKey()) });
 
 export const POST: APIRoute = async ({ request, clientAddress, url }) => {
-  const key = apiKey();
-  if (!key) return json({ error: "disabled" }, 503);
+  const gKey = geminiKey(), cKey = claudeKey();
+  if (!gKey && !cKey) return json({ error: "disabled" }, 503);
 
   // Seules les pages du site peuvent appeler la route.
   const origin = request.headers.get("origin");
@@ -58,38 +111,18 @@ export const POST: APIRoute = async ({ request, clientAddress, url }) => {
   try { ip = clientAddress } catch { ip = request.headers.get("x-forwarded-for")?.split(",")[0].trim() || ip }
   if (!allow(ip)) return json({ error: "rate_limited" }, 429);
 
-  const prompt = advicePrompt(answers, recommend(answers));
-  const client = new Anthropic({ apiKey: key });
-  const enc = new TextEncoder();
-
-  const body = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      const send = (obj: unknown) => controller.enqueue(enc.encode(JSON.stringify(obj) + "\n"));
-      const stream = client.beta.messages.stream({
-        model: MODEL,
-        max_tokens: 8000,
-        output_config: { effort: "low" },
-        // Si la demande est refusée par les filtres de sécurité, l'API la relance sur un autre modèle.
-        betas: ["server-side-fallback-2026-07-01"],
-        fallbacks: "default",
-        messages: [{ role: "user", content: prompt }],
-      }, { signal: request.signal });
-      try {
-        let wrote = false;
-        for await (const ev of stream) {
-          if (ev.type === "content_block_delta" && ev.delta.type === "text_delta") { send({ t: ev.delta.text }); wrote = true }
-        }
-        const final = await stream.finalMessage();
-        if (final.stop_reason === "refusal" || !wrote) send({ error: "default" });
-      } catch (e) {
-        if (!request.signal.aborted) {
-          console.error("[api/conseil]", e instanceof Anthropic.APIError ? `${e.status} ${e.message}` : e);
-          send({ error: e instanceof Anthropic.RateLimitError ? "rate_limited" : "default" });
-        }
-      } finally {
-        try { controller.close() } catch {}
-      }
-    },
-  });
-  return new Response(body, { headers: { "content-type": "application/x-ndjson; charset=utf-8", "cache-control": "no-store" } });
+  const prompt = analysisPrompt(answers);
+  try {
+    const text = gKey ? await askGemini(gKey, prompt, request.signal) : await askClaude(cKey!, prompt, request.signal);
+    const analysis = parseAnalysis(text);
+    if (!analysis) {
+      console.error("[api/conseil] réponse illisible :", text.slice(0, 500));
+      return json({ error: "default" }, 502);
+    }
+    return json({ analysis });
+  } catch (e) {
+    if (e instanceof RateLimited) return json({ error: "rate_limited" }, 429);
+    if (!request.signal.aborted) console.error("[api/conseil]", e instanceof Anthropic.APIError ? `${e.status} ${e.message}` : e);
+    return json({ error: "default" }, 502);
+  }
 };

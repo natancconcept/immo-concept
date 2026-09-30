@@ -13,8 +13,10 @@ interface Props {
   description: string;
   /** Image de partage, par défaut /og.png. */
   image?: string;
+  /** Page interne, absente des moteurs de recherche. */
+  noindex?: boolean;
 }
-const { title, description, image = "/og.png" } = Astro.props;
+const { title, description, image = "/og.png", noindex = false } = Astro.props;
 const canonical = new URL(Astro.url.pathname.replace(/\/$/, "") || "/", Astro.site).href;
 const fullTitle = `${title} · ${SITE.name}`;
 const ogImage = new URL(image, Astro.site).href;
@@ -32,6 +34,7 @@ const org = {
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{fullTitle}</title>
   <meta name="description" content={description}>
+  {noindex && <meta name="robots" content="noindex, nofollow">}
   <link rel="canonical" href={canonical}>
   <meta name="theme-color" content="#FFFFFF">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">

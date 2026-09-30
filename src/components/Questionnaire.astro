@@ -17,13 +17,16 @@ const { goal, readQuery = false } = Astro.props;
   import { GOALS, type Answers, type GoalId, type Question } from "../data/questionnaire";
   import { SITE, phoneDisplay, waLink } from "../data/site";
   import { recommend, profileText, isRent, budgetRange, type Reco } from "../lib/recommend";
+  import type { Analysis } from "../lib/analyse";
+  import { CITIES } from "../data/cities";
   import { fmt, esc } from "../lib/format";
+  import { contactError, leadFailMessage, sendLead } from "../lib/send-lead";
 
   const card = document.getElementById("formCard");
   const form = document.getElementById("leadForm") as HTMLFormElement | null;
   if (card && form) {
-    interface State { step: number; goal: GoalId | null; a: Answers; name: string; phone: string; email: string; msg: string }
-    const blank = (): State => ({ step: 0, goal: null, a: {}, name: "", phone: "", email: "", msg: "" });
+    interface State { step: number; goal: GoalId | null; a: Answers; name: string; phone: string; email: string; msg: string; leadId: string }
+    const blank = (): State => ({ step: 0, goal: null, a: {}, name: "", phone: "", email: "", msg: "", leadId: "" });
     const STORE = "cc-questionnaire-v2";
 
     // Projet imposé par la page, ou par l'adresse (?projet=alyah).
@@ -47,7 +50,7 @@ const { goal, readQuery = false } = Astro.props;
       ? GOALS[state.goal].pages.flatMap((pg) => pg.q.filter((q) => !q.show || q.show(state.a)).map((q) => ({ ...q, page: pg.title })))
       : []);
     const qLabel = (q: Question) => q.label.replace(/ \(plusieurs choix possibles\)/, "");
-    let lastReco: Reco[] = [];
+    let lastReco: Reco[] = [], lastAnalysis: Analysis | null = null;
 
     function setProgress(n: number) {
       const pct = state.goal ? Math.min(100, Math.round((state.step / (n + 1)) * 100)) : 4;
@@ -84,10 +87,12 @@ const { goal, readQuery = false } = Astro.props;
           (q.type === "multi" ? `<p class="q-help">Plusieurs choix possibles</p>` : "") + questionHTML(q);
       } else if (s === n + 1) {
         h = `<p class="kicker">Dernière étape</p><h3 class="q-title">Vos coordonnées</h3>
+          <p class="q-help">Nom, e‑mail et téléphone : un conseiller peut ainsi vous rappeler.</p>
           <div class="row2"><div class="field"><label for="fName">Nom et prénom</label><input type="text" id="fName" autocomplete="name" value="${esc(state.name)}"></div>
           <div class="field"><label for="fPhone">Téléphone / WhatsApp</label><input type="tel" id="fPhone" autocomplete="tel" placeholder="+33 6… ou +972 5…" value="${esc(state.phone)}"></div></div>
-          <div class="field"><label for="fEmail">E‑mail (facultatif)</label><input type="email" id="fEmail" autocomplete="email" value="${esc(state.email)}"></div>
-          <div class="field"><label for="fMsg">Un mot sur votre projet (facultatif)</label><textarea id="fMsg" rows="3">${esc(state.msg)}</textarea></div>`;
+          <div class="field"><label for="fEmail">E‑mail</label><input type="email" id="fEmail" autocomplete="email" value="${esc(state.email)}"></div>
+          <div class="field"><label for="fMsg">Un mot sur votre projet (facultatif)</label><textarea id="fMsg" rows="3">${esc(state.msg)}</textarea></div>
+          <p class="consent">Vos coordonnées servent uniquement à vous recontacter au sujet de votre projet. <a href="/mentions-legales">Données personnelles</a></p>`;
       } else {
         h = resultHTML();
       }
@@ -111,7 +116,8 @@ const { goal, readQuery = false } = Astro.props;
 
     function summaryText() {
       const lines = [`Bonjour, je souhaite être accompagné(e).`, `Projet : ${GOALS[state.goal!].label}`, ...profileText(state.goal!, state.a)];
-      if (state.goal === "olim" && lastReco.length) lines.push(`Villes conseillées par le site : ${lastReco.slice(0, 3).map((r) => r.c.name).join(", ")}`);
+      if (state.goal === "olim" && lastAnalysis) lines.push(`Villes conseillées par l’analyse : ${lastAnalysis.villes.slice(0, 3).map((v) => `${cityName(v.id)} (${v.pct} %)`).join(", ")}`);
+      else if (state.goal === "olim" && lastReco.length) lines.push(`Villes conseillées par le site : ${lastReco.slice(0, 3).map((r) => r.c.name).join(", ")}`);
       lines.push(`Nom : ${state.name}`, `Téléphone : ${state.phone}`);
       if (state.email) lines.push(`E‑mail : ${state.email}`);
       if (state.msg) lines.push(`Message : ${state.msg}`);
@@ -123,79 +129,103 @@ const { goal, readQuery = false } = Astro.props;
       let h = "";
       if (state.goal === "olim") {
         lastReco = recommend(state.a);
-        const top = lastReco.slice(0, 3);
-        h += `<p class="kicker">Votre sélection</p><h3>${first}, voici les villes qui vous correspondent le mieux.</h3>
+        h += `<div id="aiZone" aria-live="polite"><p class="kicker">Votre analyse personnalisée</p><h3>${first}, nous analysons votre profil…</h3>
+          <div class="ai-loading"><span class="spin" aria-hidden="true"></span><p>Nous comparons vos réponses avec nos fiches villes (prix, communauté, écoles, santé, emploi). Cela prend une vingtaine de secondes.</p></div></div>`;
+      } else {
+        h += `<h3>Merci ${first}, votre demande est prête.</h3><div class="summary">${esc(summaryText())}</div>`;
+      }
+      h += `<div class="send"><p>Vos coordonnées sont enregistrées : un conseiller peut vous rappeler. Vous pouvez aussi envoyer le détail sur WhatsApp.</p>
+          <a class="btn btn-wa" id="waBtn" href="${esc(waLink(summaryText()))}" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa"/></svg>Envoyer sur WhatsApp</a>
+          <div class="wa-num">Ou écrivez‑nous au <code id="waNum">${phoneDisplay()}</code><button type="button" class="copy" id="copyNum">Copier</button>${SITE.provisional ? `<span class="ph">provisoire</span>` : ""}</div></div>
+          <div class="form-nav" style="margin-top:18px"><button type="button" class="btn btn-ghost" id="editAns">Modifier mes réponses</button><button type="button" class="btn btn-ghost" id="restart">Nouvelle demande</button></div>`;
+      return h;
+    }
+
+    const cityName = (id: string) => CITIES.find((c) => c.id === id)?.name || id;
+    const firstName = () => esc(state.name.trim().split(" ")[0]);
+
+    /** Classement calculé par le site, sans IA (si l'IA n'est pas configurée ou a échoué). */
+    function localHTML(note = "") {
+      const top = lastReco.slice(0, 3);
+      return `<p class="kicker">Votre sélection</p><h3>${firstName()}, voici les villes qui vous correspondent le mieux.</h3>${note}
           <div class="recos">` + top.map((r, i) => `<article class="reco${i === 0 ? " best" : ""}">
             <div class="reco-head"><div><b><a href="/villes/${r.c.id}">${r.c.name}</a></b><span>${r.c.region} · quartiers souvent choisis : ${r.c.hood}</span></div><div class="match"><strong>${Math.round(r.score * 100)} %</strong><small>compatibilité</small></div></div>
             <div class="meter"><i style="width:${Math.round(r.score * 100)}%"></i></div>
             <ul>${r.why.map((w) => `<li>${w}</li>`).join("")}</ul>
             ${r.warn ? `<p class="warn">${r.warn}</p>` : ""}
           </article>`).join("") + `</div>
-          <p class="note">Aussi à considérer : ${lastReco.slice(3, 6).map((r) => `<a href="/villes/${r.c.id}">${r.c.name}</a> (${Math.round(r.score * 100)} %)`).join(", ")}. Ce classement est calculé à partir de vos réponses et de nos fiches villes ; un conseiller le complète avec vous.</p>
-          <div class="ai" id="aiBox" hidden>
-            <div class="ai-head"><b>Conseil personnalisé</b><span>Un texte rédigé par l’IA à partir de vos réponses</span></div>
-            <div class="ai-out" id="aiOut" aria-live="polite"></div>
-            <div class="ai-actions"><button type="button" class="btn btn-primary" id="aiGo">Obtenir le conseil de l’IA</button><button type="button" class="btn btn-ghost" id="aiStop" hidden>Arrêter</button></div>
-          </div>`;
-      } else {
-        h += `<h3>Merci ${first}, votre demande est prête.</h3><div class="summary">${esc(summaryText())}</div>`;
-      }
-      h += `<div class="send"><p>Envoyez votre demande sur WhatsApp : un conseiller vous répond en français.</p>
-          <a class="btn btn-wa" href="${esc(waLink(summaryText()))}" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa"/></svg>Envoyer sur WhatsApp</a>
-          <div class="wa-num">Ou écrivez‑nous au <code id="waNum">${phoneDisplay()}</code><button type="button" class="copy" id="copyNum">Copier</button>${SITE.provisional ? `<span class="ph">provisoire</span>` : ""}</div></div>
-          <div class="form-nav" style="margin-top:18px"><button type="button" class="btn btn-ghost" id="editAns">Modifier mes réponses</button><button type="button" class="btn btn-ghost" id="restart">Nouvelle demande</button></div>`;
-      return h;
+          <p class="note">Aussi à considérer : ${lastReco.slice(3, 6).map((r) => `<a href="/villes/${r.c.id}">${r.c.name}</a> (${Math.round(r.score * 100)} %)`).join(", ")}. Ce classement est calculé à partir de vos réponses et de nos fiches villes ; un conseiller le complète avec vous.</p>`;
+    }
+
+    /** Analyse détaillée rédigée par l'IA. Tout le texte de l'IA est échappé. */
+    function analysisHTML(an: Analysis) {
+      const li = (xs: string[]) => xs.map((x) => `<li>${esc(x)}</li>`).join("");
+      return `<p class="kicker">Votre analyse personnalisée</p><h3>${firstName()}, voici les villes qui vous correspondent le mieux.</h3>
+        ${an.synthese ? `<p class="ai-synth">${esc(an.synthese)}</p>` : ""}
+        <div class="recos">` + an.villes.map((v, i) => {
+          const c = CITIES.find((x) => x.id === v.id)!;
+          return `<article class="reco${i === 0 ? " best" : ""}">
+            <div class="reco-head"><div><b><a href="/villes/${c.id}">${c.name}</a></b><span>${c.region}${v.verdict ? " · " + esc(v.verdict) : ""}</span></div><div class="match"><strong>${v.pct} %</strong><small>compatibilité</small></div></div>
+            <div class="meter"><i style="width:${v.pct}%"></i></div>
+            <div class="reco-cols">
+              ${v.forces.length ? `<div><p class="reco-sub">Points forts pour vous</p><ul>${li(v.forces)}</ul></div>` : ""}
+              ${v.limites.length ? `<div><p class="reco-sub">Points de vigilance</p><ul class="minus">${li(v.limites)}</ul></div>` : ""}
+            </div>
+            ${v.quartiers.length ? `<p class="reco-meta"><b>Quartiers conseillés :</b> ${esc(v.quartiers.join(", "))}</p>` : ""}
+            ${v.budget ? `<p class="reco-meta"><b>Budget :</b> ${esc(v.budget)}</p>` : ""}
+          </article>`;
+        }).join("") + `</div>
+        ${an.conseils.length ? `<div class="ai-tips"><p class="reco-sub">Nos conseils pour votre installation</p><ul>${li(an.conseils)}</ul></div>` : ""}
+        <p class="note">Analyse rédigée par l’IA à partir de vos réponses et de nos fiches villes. Les prix sont des estimations indicatives ; un conseiller vérifie et complète cette analyse avec vous.</p>
+        <div class="ai-actions"><button type="button" class="link-btn" id="aiRedo">Relancer l’analyse</button></div>`;
     }
 
     /* ---------- Conseil rédigé par l'IA (route serveur /api/conseil) ---------- */
     let aiAvailable: Promise<boolean> | null = null, aiCtl: AbortController | null = null;
+    const AI_STORE = "cc-analyse-v1";
     const AI_ERRORS: Record<string, string> = {
-      rate_limited: "Trop de demandes pour le moment. Réessayez dans quelques minutes.",
-      default: "Le conseil n’a pas pu être rédigé. Vous pouvez réessayer.",
+      rate_limited: "Trop de demandes pour le moment : voici notre classement calculé. Vous pourrez relancer l’analyse détaillée dans quelques minutes.",
+      default: "L’analyse détaillée n’a pas pu être rédigée : voici notre classement calculé.",
     };
-    function setupAI() {
-      const box = document.getElementById("aiBox"); if (!box) return;
+    // Une analyse par jeu de réponses : on la garde pour ne pas refaire la demande à chaque affichage.
+    const answersKey = () => JSON.stringify(state.a);
+    const cached = (): Analysis | null => {
+      try { const c = JSON.parse(sessionStorage.getItem(AI_STORE) || "null"); return c && c.key === answersKey() ? c.analysis : null } catch { return null }
+    };
+
+    function showZone(html: string) {
+      const zone = document.getElementById("aiZone"); if (!zone) return;
+      zone.innerHTML = html;
+      const wa = document.getElementById("waBtn") as HTMLAnchorElement | null;
+      if (wa) wa.href = waLink(summaryText());
+      const redo = document.getElementById("aiRedo"), retry = document.getElementById("aiRetry");
+      if (redo) redo.onclick = () => runAI(true);
+      if (retry) retry.onclick = () => runAI(true);
+    }
+
+    async function runAI(force = false) {
+      const zone = document.getElementById("aiZone"); if (!zone) return;
+      lastAnalysis = force ? null : cached();
+      if (lastAnalysis) return showZone(analysisHTML(lastAnalysis));
       aiAvailable ||= fetch("/api/conseil").then((r) => (r.ok ? r.json() : { enabled: false })).then((j) => !!j.enabled).catch(() => false);
-      aiAvailable.then((ok) => {
-        if (!ok || !document.body.contains(box)) return;
-        box.hidden = false;
-        const out = document.getElementById("aiOut")!, go = document.getElementById("aiGo") as HTMLButtonElement, stop = document.getElementById("aiStop")!;
-        stop.onclick = () => aiCtl?.abort();
-        go.onclick = async () => {
-          aiCtl = new AbortController(); go.disabled = true; stop.hidden = false; out.textContent = "Réflexion en cours…";
-          let text = "", error = "";
-          try {
-            const res = await fetch("/api/conseil", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ answers: state.a }), signal: aiCtl.signal });
-            if (!res.ok || !res.body) {
-              const j = await res.json().catch(() => ({}));
-              if (j.error === "disabled") { box.hidden = true; return }
-              error = j.error || "default";
-            } else {
-              // Réponse en flux : une ligne JSON par morceau de texte.
-              const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
-              let buf = "";
-              for (;;) {
-                const { value, done } = await reader.read();
-                if (done) break;
-                buf += value;
-                const lines = buf.split("\n"); buf = lines.pop()!;
-                for (const l of lines) {
-                  if (!l.trim()) continue;
-                  const ev = JSON.parse(l);
-                  if (ev.t) { text += ev.t; out.textContent = text }
-                  if (ev.error) error = ev.error;
-                }
-              }
-            }
-          } catch (e) {
-            if ((e as Error).name !== "AbortError") error = "default";
-          } finally {
-            if (error) out.textContent = text + (text ? "\n\n" : "") + (AI_ERRORS[error] || AI_ERRORS.default);
-            else if (!text) out.textContent = "";
-            go.disabled = false; go.textContent = "Rédiger un autre conseil"; stop.hidden = true;
-          }
-        };
-      });
+      if (!(await aiAvailable)) return showZone(localHTML());
+      if (force) showZone(`<p class="kicker">Votre analyse personnalisée</p><h3>${firstName()}, nous analysons votre profil…</h3><div class="ai-loading"><span class="spin" aria-hidden="true"></span><p>Nouvelle analyse en cours…</p></div>`);
+      aiCtl?.abort(); aiCtl = new AbortController();
+      let error = "default";
+      try {
+        const res = await fetch("/api/conseil", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ answers: state.a }), signal: aiCtl.signal });
+        const j = await res.json().catch(() => ({}));
+        if (res.ok && j.analysis) {
+          lastAnalysis = j.analysis as Analysis;
+          try { sessionStorage.setItem(AI_STORE, JSON.stringify({ key: answersKey(), analysis: lastAnalysis })) } catch {}
+          return showZone(analysisHTML(lastAnalysis));
+        }
+        if (j.error === "disabled") return showZone(localHTML());
+        error = j.error || "default";
+      } catch (e) {
+        if ((e as Error).name === "AbortError") return;
+      }
+      showZone(localHTML(`<p class="warn">${AI_ERRORS[error] || AI_ERRORS.default} <button type="button" class="link-btn" id="aiRetry">Réessayer</button></p>`));
     }
 
     function bindForm() {
@@ -228,18 +258,20 @@ const { goal, readQuery = false } = Astro.props;
       on("back", () => { state.step--; renderForm() });
       on("skip", () => next());
       on("editAns", () => { state.step = 1; renderForm() });
-      on("restart", () => { state = blank(); lastReco = []; renderForm() });
+      on("restart", () => { state = blank(); lastReco = []; lastAnalysis = null; renderForm() });
       on("copyNum", () => {
         const cp = document.getElementById("copyNum")!;
         const p = navigator.clipboard?.writeText("+" + SITE.whatsapp);
         if (p) p.then(() => (cp.textContent = "Copié"), selectNum); else selectNum();
       });
-      setupAI();
+      if (document.getElementById("aiZone")) runAI();
     }
     function selectNum() { const r = document.createRange(); r.selectNodeContents(document.getElementById("waNum")!); const s = getSelection()!; s.removeAllRanges(); s.addRange(r) }
 
-    form.addEventListener("submit", (e) => {
+    let saving = false;
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
+      if (saving) return;
       const err = document.getElementById("err")!, Q = questions(), n = Q.length, s = state.step;
       if (s === 0) { err.textContent = "Choisissez un type de projet pour continuer."; return }
       if (s <= n) {
@@ -247,8 +279,28 @@ const { goal, readQuery = false } = Astro.props;
         if (q.req && (q.type === "multi" ? !(Array.isArray(v) && v.length) : !v)) { err.textContent = q.type === "multi" ? "Choisissez au moins une réponse." : "Choisissez une réponse."; return }
       }
       if (s === n + 1) {
-        if (state.name.trim().length < 2) { err.textContent = "Indiquez votre nom pour que l’on sache qui rappeler."; return }
-        if (state.phone.replace(/\D/g, "").length < 8) { err.textContent = "Indiquez un numéro de téléphone complet, avec l’indicatif du pays."; return }
+        const problem = contactError(state.name, state.email, state.phone);
+        if (problem) { err.textContent = problem; return }
+        if (!state.leadId) state.leadId = crypto.randomUUID();
+        saving = true;
+        const btn = form!.querySelector<HTMLButtonElement>('button[type="submit"]');
+        if (btn) btn.disabled = true;
+        const status = await sendLead({
+          id: state.leadId,
+          source: "questionnaire",
+          title: `Questionnaire · ${GOALS[state.goal!].label}`,
+          name: state.name.trim(),
+          email: state.email.trim(),
+          phone: state.phone.trim(),
+          message: state.msg.trim(),
+          lines: [...profileText(state.goal!, state.a), ...(state.goal === "olim" ? [`Villes conseillées par le site : ${recommend(state.a).slice(0, 3).map((r) => `${r.c.name} (${Math.round(r.score * 100)} %)`).join(", ")}`] : [])],
+        });
+        saving = false;
+        if (status !== "ok") {
+          err.textContent = leadFailMessage(status);
+          if (btn) btn.disabled = false;
+          return;
+        }
       }
       next();
     });

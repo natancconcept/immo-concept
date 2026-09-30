@@ -1,0 +1,163 @@
+---
+/* Espace agence : les demandes laissées à la fin du questionnaire et du simulateur.
+   Accès protégé par le mot de passe ADMIN_PASSWORD (variable d'environnement). */
+import Base from "../layouts/Base.astro";
+---
+<Base title="Demandes" description="Demandes reçues depuis le questionnaire et le simulateur." noindex>
+  <section class="admin-sec">
+    <div class="wrap admin">
+      <div class="admin-head">
+        <div><span class="kicker">Espace agence</span><h1>Demandes</h1></div>
+        <div class="admin-actions" id="adminActions" hidden>
+          <button type="button" class="btn btn-ghost btn-sm" id="adminRefresh">Actualiser</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="adminCsv">Exporter (Excel)</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="adminOut">Se déconnecter</button>
+        </div>
+      </div>
+      <div id="adminApp"><p class="muted">Chargement…</p></div>
+    </div>
+  </section>
+</Base>
+
+<script>
+  import { esc } from "../lib/format";
+
+  interface Lead { id: string; at: string; updated: string; source: "questionnaire" | "simulateur"; title: string; name: string; email: string; phone: string; message: string; lines: string[]; status?: "new" | "done" }
+
+  const app = document.getElementById("adminApp")!, actions = document.getElementById("adminActions")!;
+  let leads: Lead[] = [];
+  const view = { status: "new" as "all" | "new" | "done", source: "all" as "all" | Lead["source"], q: "" };
+  const UNCONFIGURED = "Ajoutez ADMIN_PASSWORD dans le fichier .env (ou dans les variables d’environnement de l’hébergeur), puis relancez le site.";
+
+  const when = (iso: string) => {
+    const d = new Date(iso);
+    return Number.isNaN(+d) ? "" : d.toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" });
+  };
+  const digits = (p: string) => p.replace(/\D/g, "").replace(/^00/, "");
+  const firstName = (n: string) => n.trim().split(/\s+/)[0] || "";
+  const status = (l: Lead) => l.status || "new";
+
+  /* ---------- Connexion ---------- */
+  function loginHTML(msg = "") {
+    actions.hidden = true;
+    app.innerHTML = `<form class="form-card admin-login" id="adminLogin">
+      <h2>Accès réservé à l’agence</h2>
+      <div class="field"><label for="adminPass">Mot de passe</label><input type="password" id="adminPass" autocomplete="current-password" required></div>
+      <p class="err" id="adminErr" role="alert">${esc(msg)}</p>
+      <button type="submit" class="btn btn-primary">Voir les demandes</button>
+    </form>`;
+    const form = document.getElementById("adminLogin") as HTMLFormElement;
+    (document.getElementById("adminPass") as HTMLInputElement).focus();
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const btn = form.querySelector("button") as HTMLButtonElement, err = document.getElementById("adminErr")!;
+      btn.disabled = true;
+      const res = await fetch("/api/leads", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ password: (document.getElementById("adminPass") as HTMLInputElement).value }) });
+      btn.disabled = false;
+      if (res.status === 503) { err.textContent = UNCONFIGURED; return }
+      if (res.status === 429) { err.textContent = "Trop de tentatives. Réessayez dans quelques minutes."; return }
+      if (!res.ok) { err.textContent = "Mot de passe incorrect."; return }
+      load();
+    };
+  }
+
+  /* ---------- Liste ---------- */
+  const filtered = () => {
+    const q = view.q.trim().toLowerCase();
+    return leads.filter((l) =>
+      (view.status === "all" || status(l) === view.status) &&
+      (view.source === "all" || l.source === view.source) &&
+      (!q || [l.name, l.email, l.phone, l.title, l.message, ...l.lines].join(" ").toLowerCase().includes(q)));
+  };
+
+  function cardHTML(l: Lead) {
+    const wa = `https://wa.me/${digits(l.phone)}?text=${encodeURIComponent(`Bonjour ${firstName(l.name)}, merci pour votre demande sur notre site. `)}`;
+    const done = status(l) === "done";
+    return `<article class="lead-card${done ? " is-done" : ""}" data-id="${esc(l.id)}">
+      <header>
+        <div><h3>${esc(l.name)}</h3><p class="lead-tool">${esc(l.title)}</p></div>
+        <div class="lead-side"><span class="lead-badge ${done ? "done" : "new"}">${done ? "Traité" : "À rappeler"}</span><time datetime="${esc(l.at)}">${esc(when(l.at))}</time></div>
+      </header>
+      <div class="lead-contact">
+        <a class="btn btn-wa btn-sm" href="${esc(wa)}" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa"/></svg>WhatsApp</a>
+        <a class="btn btn-ghost btn-sm" href="tel:+${esc(digits(l.phone))}">${esc(l.phone)}</a>
+        <a class="btn btn-ghost btn-sm" href="mailto:${esc(l.email)}">${esc(l.email)}</a>
+      </div>
+      ${l.message ? `<p class="lead-msg">« ${esc(l.message)} »</p>` : ""}
+      ${l.lines.length ? `<details class="lead-details"${l.lines.length <= 6 ? " open" : ""}><summary>Réponses (${l.lines.length})</summary><ul class="lead-lines">${l.lines.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
+      <div class="lead-foot">
+        <button type="button" class="btn btn-sm ${done ? "btn-ghost" : "btn-primary"}" data-act="toggle">${done ? "Remettre à rappeler" : "Marquer comme traité"}</button>
+        <button type="button" class="link-btn danger" data-act="delete">Supprimer</button>
+      </div>
+    </article>`;
+  }
+
+  function render() {
+    actions.hidden = false;
+    const count = (s: "new" | "done") => leads.filter((l) => status(l) === s).length;
+    const list = filtered();
+    const tab = (v: typeof view.status, label: string, n: number) => `<button type="button" class="adm-tab" data-status="${v}" aria-pressed="${view.status === v}">${label} <span>${n}</span></button>`;
+    app.innerHTML = `<div class="adm-tools">
+        <div class="adm-tabs" role="group" aria-label="Statut">${tab("new", "À rappeler", count("new"))}${tab("done", "Traités", count("done"))}${tab("all", "Toutes", leads.length)}</div>
+        <div class="adm-filters">
+          <select id="admSource" aria-label="Outil"><option value="all">Tous les outils</option><option value="questionnaire">Questionnaire</option><option value="simulateur">Simulateur</option></select>
+          <input type="search" id="admSearch" placeholder="Rechercher un nom, une ville…" value="${esc(view.q)}" aria-label="Rechercher">
+        </div>
+      </div>` +
+      (list.length ? `<div class="lead-list">${list.map(cardHTML).join("")}</div>`
+        : `<div class="empty"><p>${leads.length ? "Aucune demande ne correspond à ce filtre." : "Aucune demande pour le moment. Elles apparaissent ici dès qu’une personne termine le questionnaire ou le simulateur."}</p></div>`);
+    (document.getElementById("admSource") as HTMLSelectElement).value = view.source;
+    app.querySelectorAll<HTMLButtonElement>(".adm-tab").forEach((b) => (b.onclick = () => { view.status = b.dataset.status as typeof view.status; render() }));
+    (document.getElementById("admSource") as HTMLSelectElement).onchange = (e) => { view.source = (e.target as HTMLSelectElement).value as typeof view.source; render() };
+    const search = document.getElementById("admSearch") as HTMLInputElement;
+    search.oninput = () => { view.q = search.value; const pos = search.selectionStart; render(); const s2 = document.getElementById("admSearch") as HTMLInputElement; s2.focus(); s2.setSelectionRange(pos, pos) };
+    app.querySelectorAll<HTMLButtonElement>("[data-act]").forEach((b) => (b.onclick = () => act(b)));
+  }
+
+  async function act(b: HTMLButtonElement) {
+    const id = b.closest<HTMLElement>(".lead-card")!.dataset.id!, lead = leads.find((l) => l.id === id)!;
+    if (b.dataset.act === "delete") {
+      if (!confirm(`Supprimer définitivement la demande de ${lead.name} ?`)) return;
+      b.disabled = true;
+      const res = await fetch("/api/leads", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) });
+      if (res.status === 401) return loginHTML("Session expirée, reconnectez‑vous.");
+      if (!res.ok) { b.disabled = false; alert("La suppression a échoué. Réessayez."); return }
+      leads = leads.filter((l) => l.id !== id);
+      return render();
+    }
+    b.disabled = true;
+    const next = status(lead) === "done" ? "new" : "done";
+    const res = await fetch("/api/leads", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, status: next }) });
+    if (res.status === 401) return loginHTML("Session expirée, reconnectez‑vous.");
+    if (!res.ok) { b.disabled = false; alert("La mise à jour a échoué. Réessayez."); return }
+    lead.status = next;
+    render();
+  }
+
+  /* ---------- Export ---------- */
+  const csvCell = (s: string) => `"${(/^[=\-+@]/.test(s) ? "'" + s : s).replace(/"/g, '""')}"`;
+  function exportCsv() {
+    const rows = filtered().map((l) => [when(l.at), status(l) === "done" ? "Traité" : "À rappeler", l.title, l.name, l.email, l.phone, l.message, l.lines.join(" | ")].map(csvCell).join(";"));
+    const head = ["Date", "Statut", "Outil", "Nom", "E-mail", "Téléphone", "Message", "Réponses"].map(csvCell).join(";");
+    const blob = new Blob(["﻿" + [head, ...rows].join("\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `demandes-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  async function load() {
+    const res = await fetch("/api/leads", { cache: "no-store" });
+    if (res.status === 401) return loginHTML();
+    if (res.status === 503) return loginHTML(UNCONFIGURED);
+    if (!res.ok) { app.innerHTML = `<p class="err">Les demandes n’ont pas pu être chargées. Réessayez dans un instant.</p>`; return }
+    leads = ((await res.json()) as { leads: Lead[] }).leads || [];
+    render();
+  }
+
+  document.getElementById("adminRefresh")!.onclick = load;
+  document.getElementById("adminCsv")!.onclick = exportCsv;
+  document.getElementById("adminOut")!.onclick = async () => { await fetch("/api/leads", { method: "DELETE" }); loginHTML() };
+  load();
+</script>

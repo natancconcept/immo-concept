@@ -41,7 +41,7 @@ npm run check      # vérifie le code (erreurs de frappe, types)
 npm run build      # fabrique la version en ligne dans le dossier dist/
 ```
 
-Pour tester le conseil de l’IA en local, copiez `.env.example` en `.env` et renseignez `ANTHROPIC_API_KEY`. Sans clé, le bouton « Obtenir le conseil de l’IA » est simplement masqué ; le classement des villes fonctionne quand même.
+Pour tester l’analyse de l’IA en local, copiez `.env.example` en `.env` et renseignez `GEMINI_API_KEY` (gratuit) ou `ANTHROPIC_API_KEY`. Sans clé, le site affiche son propre classement des villes.
 
 ## Où changer quoi
 
@@ -110,14 +110,38 @@ Pour publier du **vrai** contenu :
 
 Pour revoir les exemples pendant le développement, mettez `showExamples: true` dans `src/data/site.ts` (ne jamais mettre en ligne ainsi).
 
-## Conseil rédigé par l’IA
+## Analyse des villes par l’IA
 
-À la fin du questionnaire alyah, le bouton « Obtenir le conseil de l’IA » appelle `/api/conseil` (fichier `src/pages/api/conseil.ts`), qui interroge l’API Claude avec le même prompt que la maquette et affiche le texte au fur et à mesure.
+À la fin du questionnaire alyah, la page appelle automatiquement `/api/conseil` (fichier `src/pages/api/conseil.ts`). Le serveur construit un prompt avec **toutes les réponses cochées** et les données de **toutes les villes** (prix estimés, coût du logement recherché, notes, hôpitaux, quartiers, score calculé par le site), puis demande à l’IA une réponse en JSON : une synthèse, les 5 villes les plus adaptées avec un **pourcentage de compatibilité**, les points forts, les points de vigilance, les quartiers conseillés et l’adéquation du budget, plus des conseils pratiques. La réponse est vérifiée (villes connues, pourcentages entre 0 et 100) avant d’être affichée. Le prompt et la vérification sont dans `src/lib/analyse.ts`.
 
-- **Clé** : variable d’environnement `ANTHROPIC_API_KEY` (clé à créer sur [console.anthropic.com](https://console.anthropic.com)). Ne la mettez jamais dans le code.
-- **Modèle** : `claude-opus-5`, avec un effort « low » (réponse courte et rapide). Si une demande est refusée par les filtres de sécurité, l’API la relance automatiquement sur un autre modèle.
+Si l’IA n’est pas configurée ou échoue, le site affiche son propre classement (`src/lib/recommend.ts`). L’analyse est gardée pendant la visite : revenir sur la page ne relance pas de demande.
+
+- **Gemini (gratuit, utilisé en priorité)** : créez une clé sur [aistudio.google.com/apikey](https://aistudio.google.com/apikey) et mettez‑la dans `GEMINI_API_KEY`. Modèle par défaut `gemini-2.5-flash`, modifiable avec `GEMINI_MODEL`. L’offre gratuite a des quotas par minute et par jour ; au‑delà, le site affiche son classement et propose de réessayer. Sur l’offre gratuite, Google peut utiliser les demandes pour améliorer ses modèles (les réponses du questionnaire, sans nom, e‑mail ni téléphone).
+- **Claude (payant)** : utilisé si `GEMINI_API_KEY` est vide et `ANTHROPIC_API_KEY` renseignée (clé sur [console.anthropic.com](https://console.anthropic.com)). Modèle `claude-opus-5`, effort « low », sortie JSON contrainte par le schéma.
+- Ne mettez jamais une clé dans le code.
 - **Anti‑abus** : le prompt est construit sur le serveur à partir des réponses du questionnaire, vérifiées une par une. Personne ne peut envoyer un texte libre à l’IA. Chaque adresse IP est limitée à 4 demandes par 10 minutes et 12 par jour, avec un plafond de 300 demandes par jour. Seules les pages du site peuvent appeler la route. Ces réglages sont en haut de `conseil.ts`.
-- Les compteurs sont gardés en mémoire par le serveur : c’est une protection de base, suffisante pour un site vitrine. Pour une limite stricte, ajoutez un compteur partagé (par exemple Upstash Redis) et fixez aussi un plafond de dépenses mensuel dans la console Anthropic.
+- Les compteurs sont gardés en mémoire par le serveur : c’est une protection de base, suffisante pour un site vitrine. Pour une limite stricte, ajoutez un compteur partagé (par exemple Upstash Redis) et, avec Claude, fixez aussi un plafond de dépenses mensuel dans la console Anthropic.
+
+## Demandes (leads)
+
+À la dernière étape du questionnaire et du simulateur, la personne indique son nom, son e‑mail et son téléphone. La demande (coordonnées et réponses) est enregistrée, même si elle n’envoie pas le message WhatsApp.
+
+L’agence les retrouve sur la page **`/admin`** (adresse non affichée sur le site, exclue de Google), protégée par le mot de passe `ADMIN_PASSWORD` (dans `.env` en local, ou dans les variables d’environnement de Netlify / Vercel). Choisissez un mot de passe long et ne le partagez qu’avec l’équipe.
+
+Sur cette page :
+
+- chaque demande affiche le nom, l’outil utilisé (questionnaire ou simulateur, et le projet), la date, le message éventuel et toutes les réponses ;
+- boutons **WhatsApp** (message prérempli avec le prénom), **appeler** et **e‑mail** ;
+- suivi : **À rappeler** / **Traité**, avec les compteurs ;
+- filtre par outil et **recherche** (nom, ville, téléphone…) ;
+- **Exporter (Excel)** : fichier CSV des demandes affichées, qui s’ouvre dans Excel ;
+- **Supprimer** une demande, par exemple si la personne demande l’effacement de ses données.
+
+Le formulaire indique aux visiteurs que leurs coordonnées servent uniquement à les recontacter (lien vers les mentions légales).
+
+- **En local** : les demandes sont dans le fichier `.data/leads.json` (non versionné).
+- **Sur Netlify** : elles sont gardées dans Netlify Blobs, sans réglage supplémentaire.
+- **Sur Vercel** : créez un magasin Blob (Storage › Blob) et renseignez `BLOB_READ_WRITE_TOKEN`. Les fichiers sont privés.
 
 ## Mettre le site en ligne
 
@@ -129,13 +153,13 @@ Dans les deux cas, commencez par envoyer le projet sur GitHub (ou GitLab / Bitbu
 
 1. Sur [app.netlify.com](https://app.netlify.com), **Add new site › Import an existing project**, puis choisissez le dépôt.
 2. Les réglages sont détectés : commande `npm run build`, dossier `dist`.
-3. **Site configuration › Environment variables** : ajoutez `ANTHROPIC_API_KEY` et `SITE_URL` (ex. `https://www.votre-domaine.com`).
+3. **Site configuration › Environment variables** : ajoutez `GEMINI_API_KEY` (ou `ANTHROPIC_API_KEY`), `SITE_URL` (ex. `https://www.votre-domaine.com`) et `ADMIN_PASSWORD` (page `/admin`).
 4. Déployez. Chaque nouveau commit met le site à jour automatiquement.
 
 ### Vercel
 
 1. Sur [vercel.com/new](https://vercel.com/new), importez le dépôt. Le framework Astro est détecté.
-2. **Settings › Environment Variables** : ajoutez `ANTHROPIC_API_KEY` et `SITE_URL`.
+2. **Settings › Environment Variables** : ajoutez `GEMINI_API_KEY` (ou `ANTHROPIC_API_KEY`), `SITE_URL`, `ADMIN_PASSWORD` et `BLOB_READ_WRITE_TOKEN` (magasin Blob, pour enregistrer les demandes).
 3. Déployez.
 
 ### Nom de domaine
@@ -155,7 +179,7 @@ src/
   components/   Header, Footer, WhatsAppFloat, Simulator, Questionnaire, Gallery,
                 GalleryCard, CityCard, BeforeAfter, Steps, Crumbs…
   layouts/      Base.astro : balises <head>, SEO, en‑tête et pied de page communs
-  pages/        une page = une adresse ; pages/api/conseil.ts = route de l’IA
+  pages/        une page = une adresse ; pages/api/conseil.ts = route de l’IA ; pages/api/lead.ts = demandes ; /admin = consultation
   styles/       global.css
 src/assets/photos/  photos du site (optimisées automatiquement)
 public/         fichiers servis tels quels : og.png, favicon.svg, realisations/ (vidéos)

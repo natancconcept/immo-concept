@@ -19,11 +19,12 @@ const { mode, city } = Astro.props;
   import { compute, SITUATIONS, minApport, monthly, pct, sum, type Line, type Mode, type Reno, type Situation } from "../lib/simulate";
   import { fmt, shek, shekK, esc } from "../lib/format";
   import { waLink } from "../data/site";
+  import { contactError, leadFailMessage, sendLead } from "../lib/send-lead";
 
   const root = document.getElementById("simw");
   if (root) {
     const body = document.getElementById("simBody")!, bar = document.getElementById("simProgress")!;
-    interface S { mode?: Mode; city?: string; surface?: number; situation?: Situation; reno?: Reno; apport?: number; years?: number }
+    interface S { mode?: Mode; city?: string; surface?: number; situation?: Situation; reno?: Reno; apport?: number; years?: number; name?: string; email?: string; phone?: string; leadId?: string; contactDone?: boolean }
     const st: S = {};
     const params = new URLSearchParams(location.search);
     const modes: Mode[] = ["achat", "location", "invest", "flip"];
@@ -49,16 +50,17 @@ const { mode, city } = Astro.props;
     const price = () => city().m2 * (st.surface || 100);
 
     // Étapes selon le projet.
-    type Step = "mode" | "city" | "surface" | "situation" | "reno" | "apport" | "years";
+    type Step = "mode" | "city" | "surface" | "situation" | "reno" | "apport" | "years" | "contact";
     const steps = (): Step[] => {
       const m = st.mode ?? "achat"; // tant que le projet n'est pas choisi, on compte le parcours le plus fréquent
       const s: Step[] = ["mode", "city", "surface"];
       if (m !== "location") s.push("situation");
       if (m === "flip") s.push("reno");
       if (m === "achat" || m === "invest") { s.push("apport"); if ((st.apport ?? 0) < 1) s.push("years") }
+      s.push("contact");
       return s;
     };
-    const answered = (k: Step) => st[k] !== undefined;
+    const answered = (k: Step) => k === "contact" ? !!st.contactDone : st[k] !== undefined;
     const firstOpen = (): Step | "result" => steps().find((k) => !answered(k)) || "result";
     let cur: Step | "result" = firstOpen();
 
@@ -76,7 +78,13 @@ const { mode, city } = Astro.props;
         const list = [0.25, 0.3, 0.4, 0.5, 0.75, 1].filter((a) => a >= min - 1e-9);
         return ["Le financement", "Quel apport personnel ?", `<p class="q-help">Pour votre situation, les banques financent au maximum ${pct(1 - min)} du prix : l’apport minimum est de ${pct(min)}.</p><div class="opts">${list.map((a) => opt(String(a), a === 1 ? "Achat comptant" : `${pct(a)} du prix`, st.apport === a, a === 1 ? "Sans prêt immobilier" : `Prêt de ${shekK(price() * (1 - a))}`, shekK(price() * a))).join("")}</div>`];
       }
-      return ["Le financement", "Sur combien d’années ?", `<p class="q-help">Taux moyen retenu : ${pct(H.LOAN_RATE, 1)}.</p><div class="opts">${H.LOAN_YEARS.map((y) => opt(String(y), `${y} ans`, st.years === y, "", `${shek(monthly(price() * (1 - (st.apport ?? 0.3)), y))} / mois`)).join("")}</div>`];
+      if (k === "years") return ["Le financement", "Sur combien d’années ?", `<p class="q-help">Taux moyen retenu : ${pct(H.LOAN_RATE, 1)}.</p><div class="opts">${H.LOAN_YEARS.map((y) => opt(String(y), `${y} ans`, st.years === y, "", `${shek(monthly(price() * (1 - (st.apport ?? 0.3)), y))} / mois`)).join("")}</div>`];
+      return ["Vos coordonnées", "Comment vous joindre ?", `<p class="q-help">Nom, e‑mail et téléphone : un conseiller peut ainsi vous rappeler avec cette estimation.</p>
+        <div class="row2"><div class="field"><label for="simName">Nom et prénom</label><input type="text" id="simName" autocomplete="name" value="${esc(st.name || "")}"></div>
+        <div class="field"><label for="simPhone">Téléphone / WhatsApp</label><input type="tel" id="simPhone" autocomplete="tel" placeholder="+33 6… ou +972 5…" value="${esc(st.phone || "")}"></div></div>
+        <div class="field"><label for="simEmail">E‑mail</label><input type="email" id="simEmail" autocomplete="email" value="${esc(st.email || "")}"></div>
+        <p class="consent">Vos coordonnées servent uniquement à vous recontacter au sujet de votre projet. <a href="/mentions-legales">Données personnelles</a></p>
+        <p class="err" id="simErr" role="alert"></p>`];
     }
 
     function setAnswer(k: Step, v: string) {
@@ -86,7 +94,7 @@ const { mode, city } = Astro.props;
       else if (k === "situation") { st.situation = v as Situation; if ((st.apport ?? 1) < minApport(st.situation)) delete st.apport }
       else if (k === "reno") st.reno = v as Reno;
       else if (k === "apport") { st.apport = +v; if (st.apport >= 1) st.years = st.years ?? 25 }
-      else st.years = +v;
+      else if (k === "years") st.years = +v;
     }
 
     function go(k: Step | "result") {
@@ -100,9 +108,15 @@ const { mode, city } = Astro.props;
       const done = cur === "result" ? list.length : list.indexOf(cur as Step);
       bar.innerHTML = `<i style="width:${Math.max(4, Math.round((done / list.length) * 100))}%"></i>`;
       root!.classList.toggle("is-result", cur === "result");
-      if (cur === "result") { body.innerHTML = resultHTML(); bindResult(); return }
+      if (cur === "result") { body.innerHTML = resultHTML(); bindResult(); if (st.contactDone) void pushLead(); return }
       const k = cur as Step, i = list.indexOf(k);
       const [kicker, title, html] = stepHTML(k);
+      if (k === "contact") {
+        body.innerHTML = `<p class="kicker">${kicker} · étape ${i + 1} sur ${list.length}</p><h3 class="q-title">${title}</h3>${html}
+          <div class="form-nav"><button type="button" class="btn btn-ghost" id="simBack">Retour</button><button type="button" class="btn btn-primary" id="simSend">Voir mon estimation</button></div>`;
+        bindContact(list[i - 1]);
+        return;
+      }
       body.innerHTML = `<p class="kicker">${kicker} · étape ${i + 1} sur ${list.length}</p><h3 class="q-title">${title}</h3>${html}
         <div class="form-nav">${i > 0 ? `<button type="button" class="btn btn-ghost" id="simBack">Retour</button>` : "<span></span>"}${answered(k) ? `<button type="button" class="btn btn-primary" id="simNext">Continuer</button>` : ""}</div>`;
       // Un clic sur une réponse l'enregistre et passe à l'étape suivante.
@@ -113,6 +127,45 @@ const { mode, city } = Astro.props;
       }));
       document.getElementById("simBack")?.addEventListener("click", () => go(list[i - 1]));
       document.getElementById("simNext")?.addEventListener("click", () => go(i + 1 < steps().length ? steps()[i + 1] : "result"));
+    }
+
+    let leadKey = "";
+    async function pushLead(): Promise<"ok" | "rate" | "fail"> {
+      if (!st.leadId) st.leadId = crypto.randomUUID();
+      const lines = summaryText().split("\n");
+      const key = lines.join("\n");
+      if (key === leadKey) return "ok";
+      const status = await sendLead({
+        id: st.leadId,
+        source: "simulateur",
+        title: `Simulateur · ${MODE_INFO[st.mode!].label}`,
+        name: (st.name || "").trim(),
+        email: (st.email || "").trim(),
+        phone: (st.phone || "").trim(),
+        lines,
+      });
+      if (status === "ok") leadKey = key;
+      return status;
+    }
+    function bindContact(prev: Step) {
+      const name = document.getElementById("simName") as HTMLInputElement;
+      const email = document.getElementById("simEmail") as HTMLInputElement;
+      const phone = document.getElementById("simPhone") as HTMLInputElement;
+      const remember = () => { st.name = name.value; st.email = email.value; st.phone = phone.value };
+      name.oninput = remember; email.oninput = remember; phone.oninput = remember;
+      document.getElementById("simBack")!.onclick = () => { remember(); go(prev) };
+      document.getElementById("simSend")!.onclick = async () => {
+        remember();
+        const err = document.getElementById("simErr")!;
+        const problem = contactError(st.name || "", st.email || "", st.phone || "");
+        if (problem) { err.textContent = problem; return }
+        const btn = document.getElementById("simSend") as HTMLButtonElement;
+        btn.disabled = true;
+        const status = await pushLead();
+        if (status !== "ok") { err.textContent = leadFailMessage(status); btn.disabled = false; return }
+        st.contactDone = true;
+        go("result");
+      };
     }
 
     /* ---------- Résultat ---------- */
@@ -126,6 +179,7 @@ const { mode, city } = Astro.props;
       if (st.situation) lines.push(`Situation : ${SITUATIONS.find((s) => s.id === st.situation)!.label}.`);
       if (st.apport !== undefined) lines.push(`Apport : ${pct(st.apport)}${st.apport < 1 ? `, prêt sur ${st.years} ans` : ""}.`);
       if (st.reno) lines.push(`Travaux : ${H.RENO[st.reno].label.toLowerCase()}.`);
+      if (st.name?.trim()) lines.push(`Nom : ${st.name.trim()}`, `E‑mail : ${(st.email || "").trim()}`, `Téléphone : ${(st.phone || "").trim()}`);
       lines.push("Pouvez‑vous m’envoyer une étude détaillée ?");
       return lines.join("\n");
     }
@@ -133,7 +187,7 @@ const { mode, city } = Astro.props;
     function resultHTML() {
       const c = city();
       const r: any = compute({ mode: st.mode!, city: c, surface: st.surface!, situation: st.situation || "resident", apport: st.apport ?? 1, years: st.years ?? 25, reno: st.reno || "full" });
-      const chips = steps().map((k) => {
+      const chips = steps().filter((k) => k !== "contact").map((k) => {
         const val = k === "mode" ? MODE_INFO[st.mode!].label : k === "city" ? c.name : k === "surface" ? `${st.surface} m²` : k === "situation" ? SITUATIONS.find((s) => s.id === st.situation)!.label : k === "reno" ? H.RENO[st.reno!].label : k === "apport" ? (st.apport! >= 1 ? "Achat comptant" : `Apport ${pct(st.apport!)}`) : `Prêt sur ${st.years} ans`;
         return `<button type="button" class="res-chip" data-step="${k}" title="Modifier">${val}</button>`;
       }).join("");
@@ -176,7 +230,7 @@ const { mode, city } = Astro.props;
           <div class="res-main">${blocks}</div>
           <aside class="res-side">
             <div class="res-card"><h4>Ajuster</h4>${surfAdj}${apAdj}</div>
-            <div class="res-card res-cta"><h4>Un chiffrage précis, bien par bien</h4><p>Un conseiller francophone vérifie ces chiffres avec vous : prix réels du quartier, taux obtenus auprès des banques, taxes calculées par notre avocat.</p>
+            <div class="res-card res-cta"><h4>Un chiffrage précis, bien par bien</h4><p>Vos coordonnées sont enregistrées. Un conseiller francophone vérifie ces chiffres avec vous : prix réels du quartier, taux obtenus auprès des banques, taxes calculées par notre avocat.</p>
               <a class="btn btn-wa" href="${esc(waLink(summaryText()))}" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa"/></svg>Recevoir une étude</a></div>
           </aside>
         </div>
@@ -186,9 +240,14 @@ const { mode, city } = Astro.props;
 
     function bindResult() {
       body.querySelectorAll<HTMLButtonElement>(".res-chip").forEach((b) => (b.onclick = () => go(b.dataset.step as Step)));
-      document.getElementById("simRestart")!.onclick = () => { for (const k of Object.keys(st)) delete (st as Record<string, unknown>)[k]; go("mode") };
+      document.getElementById("simRestart")!.onclick = () => {
+        // Nouvelle simulation = nouvelle demande, mais on garde les coordonnées déjà saisies.
+        const keep = { name: st.name, email: st.email, phone: st.phone };
+        for (const k of Object.keys(st)) delete (st as Record<string, unknown>)[k];
+        Object.assign(st, keep); leadKey = ""; go("mode");
+      };
       const surf = document.getElementById("adjSurf") as HTMLInputElement | null, ap = document.getElementById("adjAp") as HTMLInputElement | null;
-      const refresh = (focusId: string) => { const y = scrollY; body.innerHTML = resultHTML(); bindResult(); scrollTo(0, y); (document.getElementById(focusId) as HTMLInputElement | null)?.focus({ preventScroll: true }) };
+      const refresh = (focusId: string) => { const y = scrollY; body.innerHTML = resultHTML(); bindResult(); void pushLead(); scrollTo(0, y); (document.getElementById(focusId) as HTMLInputElement | null)?.focus({ preventScroll: true }) };
       surf?.addEventListener("input", () => { document.getElementById("adjSurfOut")!.textContent = surf.value + " m²" });
       surf?.addEventListener("change", () => { st.surface = +surf.value; refresh("adjSurf") });
       ap?.addEventListener("input", () => { document.getElementById("adjApOut")!.textContent = ap.value + " %" });

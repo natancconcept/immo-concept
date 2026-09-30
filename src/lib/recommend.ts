@@ -1,9 +1,8 @@
 /* Classement des villes du questionnaire, repris tel quel de la maquette.
-   Utilisé dans le navigateur (résultats) et par /api/conseil (prompt de l'IA). */
+   Utilisé dans le navigateur (résultats) et par /api/conseil (repère donné à l'IA). */
 import { CITIES, type City } from "../data/cities";
 import { GOALS, type Answers, type GoalId } from "../data/questionnaire";
 import { fmt, shekK } from "./format";
-import { SITE } from "../data/site";
 
 export interface Reco { c: City; score: number; why: string[]; warn: string; est: number }
 
@@ -67,23 +66,6 @@ export function profileText(goal: GoalId, a: Answers): string[] {
     lines.push(`${q.label.replace(/ \(plusieurs choix possibles\)/, "")} : ${v}`);
   }));
   return lines;
-}
-
-/** Prompt du « Conseil personnalisé », identique à la maquette. */
-export function advicePrompt(a: Answers, reco: Reco[]): string {
-  const cityFacts = reco.slice(0, 6).map((r) => `- ${r.c.name} (compatibilité ${Math.round(r.score * 100)} %) : prix moyen estimé ${fmt(r.c.m2)} ₪/m², loyer estimé ${r.c.rent} ₪/m²/mois, hôpital : ${r.c.hospName}, quartiers : ${r.c.hood}. Points forts calculés : ${r.why.join("; ") || "aucun"}.${r.warn ? " " + r.warn : ""}`).join("\n");
-  return `Tu es conseiller d'une agence immobilière francophone en Israël qui accompagne les olim depuis ${SITE.years} ans (avocats, travaux, recherche de logement).
-Rédige en français un conseil personnalisé, chaleureux et concret (220 mots maximum, sans titre, 3 courts paragraphes) pour cette famille qui prépare son alyah :
-1) quelle ville et quels quartiers privilégier et pourquoi, en t'appuyant sur leur profil ;
-2) une alternative et le compromis qu'elle implique ;
-3) 2 ou 3 conseils pratiques pour leur situation (écoles, oulpan, santé, démarches, type de bien), sans chiffres inventés.
-N'invente aucun prix : utilise uniquement les estimations fournies et précise qu'elles sont indicatives. Termine en proposant d'en parler avec un conseiller sur WhatsApp.
-
-Profil :
-${profileText("olim", a).join("\n")}
-
-Villes classées par le site :
-${cityFacts}`;
 }
 
 /** Ne garde que les réponses valides du parcours alyah (utilisé côté serveur). */
