@@ -13,6 +13,6 @@ export default defineConfig({
   trailingSlash: "never",
   redirects: { "/coup-de-fusil": "/investissement", "/renovation-revente": "/investissement" },
   // Les photos sont optimisées une fois pour toutes à la construction du site (WebP/AVIF).
-  adapter: process.env.VERCEL ? vercel() : netlify({ imageCDN: false }),
+  adapter: process.env.VERCEL ? vercel({ maxDuration: 60 }) : netlify({ imageCDN: false }),
   integrations: [sitemap({ filter: (page) => !page.includes("/api/") && !page.endsWith("/admin") })],
 });

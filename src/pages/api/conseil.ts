@@ -12,17 +12,25 @@ import { ANALYSIS_SCHEMA, analysisPrompt, parseAnalysis } from "../../lib/analys
 import { SIM_SCHEMA, parseSimAnalysis, sanitizeSimAnswers, simPrompt } from "../../lib/sim-analyse";
 
 export const prerender = false;
+/** Vercel : laisser le temps à Gemini (modèles + retries). */
+export const maxDuration = 60;
 
 const CLAUDE_MODEL = "claude-opus-5";
 const LIMITS = {
-  perIpWindow: 4,          // demandes par adresse IP…
-  windowMs: 10 * 60_000,   // …sur 10 minutes
-  perIpDay: 12,            // demandes par adresse IP et par jour
-  globalDay: 300,          // plafond total par jour (par instance du serveur)
+  perIpWindow: 4,
+  windowMs: 10 * 60_000,
+  perIpDay: 12,
+  globalDay: 300,
   maxBodyBytes: 4_000,
 };
 
-const env = (k: string): string | undefined => process.env[k] || import.meta.env[k];
+const env = (k: string): string | undefined => {
+  const fromProc = process.env[k];
+  if (typeof fromProc === "string" && fromProc.trim()) return fromProc.trim();
+  const fromAstro = (import.meta.env as Record<string, unknown>)[k];
+  if (typeof fromAstro === "string" && fromAstro.trim()) return fromAstro.trim();
+  return undefined;
+};
 const geminiKey = () => env("GEMINI_API_KEY");
 const claudeKey = () => env("ANTHROPIC_API_KEY");
 
@@ -46,16 +54,29 @@ const json = (body: unknown, status = 200) =>
 
 class RateLimited extends Error {}
 
-/** Gemini (Interactions API de Google AI Studio). On essaie les modèles de gauche à droite ;
-    si l’un est indisponible, saturé ou renvoie une réponse vide, on passe au suivant. */
-const MODELS = ["gemini-3.1-flash-lite", "gemini-3-flash-preview", "gemini-3.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-flash"];
+/** Ne pas passer request.signal à Gemini : sur Vercel il est souvent déjà aborté → 502 immédiat.
+    Les modèles 2.5 ne sont plus proposés aux nouvelles clés. */
+const MODELS = ["gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-3-flash-preview", "gemini-3.5-flash", "gemini-3.8-flash"];
+const GEMINI_MS = 28_000;
 
-async function askGemini(key: string, prompt: string, schema: object, signal: AbortSignal): Promise<string> {
+function readGeminiText(data: Record<string, unknown>): string {
+  const steps = Array.isArray(data.steps) ? data.steps as { type?: string; content?: { type?: string; text?: string }[] }[] : [];
+  const fromSteps = steps.filter((s) => s.type === "model_output" || s.type === "text").flatMap((s) => s.content || []).map((c) => c.text || "").join("");
+  if (fromSteps.trim()) return fromSteps;
+  const parts = ((data.candidates as { content?: { parts?: { text?: string }[] } }[] | undefined) || [])
+    .flatMap((c) => c.content?.parts || []).map((p) => p.text || "").join("");
+  if (parts.trim()) return parts;
+  return typeof data.text === "string" ? data.text : "";
+}
+
+async function askGemini(key: string, prompt: string, schema: object): Promise<string> {
   const models = [...new Set([env("GEMINI_MODEL"), ...MODELS].filter((m): m is string => !!m))];
-  const call = (model: string, withSchema: boolean) => fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
+  const signal = AbortSignal.timeout(GEMINI_MS);
+  const headers = { "content-type": "application/json", "x-goog-api-key": key };
+  const interact = (model: string, withSchema: boolean) => fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
     method: "POST",
     signal,
-    headers: { "content-type": "application/json", "x-goog-api-key": key },
+    headers,
     body: JSON.stringify({
       model,
       input: prompt,
@@ -64,44 +85,58 @@ async function askGemini(key: string, prompt: string, schema: object, signal: Ab
       response_format: { type: "text", mime_type: "application/json", ...(withSchema ? { schema } : {}) },
     }),
   });
-  const readText = (data: { steps?: { type?: string; content?: { type?: string; text?: string }[] }[] }) =>
-    (data?.steps || []).filter((s) => s.type === "model_output").flatMap((s) => s.content || []).map((c) => c.text || "").join("");
+  const generate = (model: string, withSchema: boolean) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+    method: "POST",
+    signal,
+    headers,
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.3, responseMimeType: "application/json", ...(withSchema ? { responseSchema: schema } : {}) },
+    }),
+  });
   let lastErr = "Gemini : aucun modèle n’a répondu";
   let only429 = true;
   for (const model of models) {
-    if (signal.aborted) throw new Error("aborted");
-    try {
-      let res = await call(model, true);
-      // Certains modèles n'acceptent pas le schéma : on redemande sans (le prompt décrit déjà le format).
-      if (res.status === 400) res = await call(model, false);
-      if (res.status === 503) {
-        await new Promise((r) => setTimeout(r, 1500));
-        if (signal.aborted) throw new Error("aborted");
-        res = await call(model, true);
+    if (signal.aborted) break;
+    for (const call of [interact, generate]) {
+      try {
+        let res = await call(model, true);
+        if (res.status === 400) res = await call(model, false);
+        if (res.status === 503) {
+          await new Promise((r) => setTimeout(r, 1200));
+          if (signal.aborted) break;
+          res = await call(model, true);
+        }
+        if (res.status === 429) {
+          lastErr = `Gemini ${model} 429`;
+          console.warn(`[api/conseil] Gemini ${model} quota atteint, essai du modèle suivant`);
+          break;
+        }
+        only429 = false;
+        if (res.status === 404) {
+          lastErr = `Gemini ${model} 404`;
+          continue;
+        }
+        if (!res.ok) {
+          lastErr = `Gemini ${model} ${res.status} ${(await res.text()).slice(0, 200)}`;
+          console.warn(`[api/conseil] Gemini ${model} indisponible (${res.status})`);
+          continue;
+        }
+        const text = readGeminiText(await res.json());
+        if (text.trim()) {
+          console.info(`[api/conseil] Gemini ${model} ok`);
+          return text;
+        }
+        lastErr = `Gemini ${model} réponse vide`;
+      } catch (e) {
+        if ((e as Error).name === "TimeoutError" || (e as Error).name === "AbortError") {
+          lastErr = "Gemini délai dépassé";
+          break;
+        }
+        only429 = false;
+        lastErr = e instanceof Error ? e.message : String(e);
+        console.warn(`[api/conseil] Gemini ${model} erreur :`, lastErr);
       }
-      if (res.status === 429) {
-        lastErr = `Gemini ${model} 429`;
-        console.warn(`[api/conseil] Gemini ${model} quota atteint, essai du modèle suivant`);
-        continue;
-      }
-      only429 = false;
-      if (!res.ok) {
-        lastErr = `Gemini ${model} ${res.status} ${(await res.text()).slice(0, 200)}`;
-        console.warn(`[api/conseil] Gemini ${model} indisponible (${res.status}), essai du modèle suivant`);
-        continue;
-      }
-      const text = readText(await res.json());
-      if (text.trim()) {
-        console.info(`[api/conseil] Gemini ${model} ok`);
-        return text;
-      }
-      lastErr = `Gemini ${model} réponse vide`;
-      console.warn(`[api/conseil] Gemini ${model} réponse vide, essai du modèle suivant`);
-    } catch (e) {
-      if (signal.aborted || (e as Error).name === "AbortError") throw e;
-      only429 = false;
-      lastErr = e instanceof Error ? e.message : String(e);
-      console.warn(`[api/conseil] Gemini ${model} erreur, essai du modèle suivant :`, lastErr);
     }
   }
   if (only429) throw new RateLimited();
@@ -116,7 +151,6 @@ async function askClaude(key: string, prompt: string, schema: Record<string, unk
       model: CLAUDE_MODEL,
       max_tokens: 16000,
       output_config: { effort: "low", format: { type: "json_schema", schema } },
-      // Si la demande est refusée par les filtres de sécurité, l'API la relance sur un autre modèle.
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
       messages: [{ role: "user", content: prompt }],
@@ -135,7 +169,6 @@ export const POST: APIRoute = async ({ request, clientAddress, url }) => {
   const gKey = geminiKey(), cKey = claudeKey();
   if (!gKey && !cKey) return json({ error: "disabled" }, 503);
 
-  // Seules les pages du site peuvent appeler la route.
   const origin = request.headers.get("origin");
   if (origin && new URL(origin).host !== url.host) return json({ error: "forbidden" }, 403);
 
@@ -158,7 +191,7 @@ export const POST: APIRoute = async ({ request, clientAddress, url }) => {
   if (!allow(ip)) return json({ error: "rate_limited" }, 429);
 
   try {
-    const text = gKey ? await askGemini(gKey, job.prompt, job.schema, request.signal) : await askClaude(cKey!, job.prompt, job.schema, request.signal);
+    const text = gKey ? await askGemini(gKey, job.prompt, job.schema) : await askClaude(cKey!, job.prompt, job.schema, AbortSignal.timeout(GEMINI_MS));
     const analysis = job.parse(text);
     if (!analysis) {
       console.error("[api/conseil] réponse illisible :", text.slice(0, 500));
@@ -167,7 +200,7 @@ export const POST: APIRoute = async ({ request, clientAddress, url }) => {
     return json({ analysis });
   } catch (e) {
     if (e instanceof RateLimited) return json({ error: "rate_limited" }, 429);
-    if (!request.signal.aborted) console.error("[api/conseil]", e instanceof Anthropic.APIError ? `${e.status} ${e.message}` : e);
+    console.error("[api/conseil]", e instanceof Anthropic.APIError ? `${e.status} ${e.message}` : e);
     return json({ error: "default" }, 502);
   }
 };
