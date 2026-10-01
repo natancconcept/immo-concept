@@ -10,12 +10,14 @@
     "check": "astro check"
   },
   "dependencies": {
+    "@ai-sdk/google": "^4.0.87",
     "@anthropic-ai/sdk": "^0.128.0",
     "@astrojs/netlify": "^8.2.6",
     "@astrojs/sitemap": "^3.7.4",
     "@astrojs/vercel": "^11.0.11",
     "@netlify/blobs": "^10.7.13",
     "@vercel/blob": "^2.8.0",
+    "ai": "^7.0.126",
     "astro": "^7.3.4"
   },
   "devDependencies": {

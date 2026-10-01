@@ -1,10 +1,10 @@
 /* Analyses rédigées par l'IA.
-   - GET  → { enabled } : l'analyse n'est proposée que si une clé d'IA est configurée.
-   - POST → { answers } (questionnaire alyah) ou { sim } (simulateur) : { analysis } ou { error }.
-   Gemini d'abord (clé GEMINI_API_KEY), sinon Claude. En ligne, si Vercel est refusé par Google
-   (offre gratuite / IP datacenter), le navigateur relance l'appel (voir src/lib/gemini.ts). */
+   Montage Vercel officiel : AI SDK (`ai` + `@ai-sdk/google`), clé GEMINI_API_KEY
+   ou GOOGLE_GENERATIVE_AI_API_KEY. Si l’appel direct Google échoue, on tente
+   la AI Gateway Vercel (`AI_GATEWAY_API_KEY` ou OIDC sur Vercel). */
 import type { APIRoute } from "astro";
-import { generateGeminiJson } from "../../lib/gemini";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { generateText } from "ai";
 import { sanitizeOlimAnswers } from "../../lib/recommend";
 import { ANALYSIS_SCHEMA, analysisPrompt, parseAnalysis } from "../../lib/analyse";
 import { SIM_SCHEMA, parseSimAnalysis, sanitizeSimAnswers, simPrompt } from "../../lib/sim-analyse";
@@ -27,8 +27,11 @@ const env = (k: string): string | undefined => {
   if (typeof fromAstro === "string" && fromAstro.trim()) return fromAstro.replace(/^['"]|['"]$/g, "").trim();
   return undefined;
 };
-const geminiKey = () => env("GEMINI_API_KEY") || env("PUBLIC_GEMINI_API_KEY");
+const geminiKey = () => env("GEMINI_API_KEY") || env("GOOGLE_GENERATIVE_AI_API_KEY") || env("GOOGLE_API_KEY");
 const claudeKey = () => env("ANTHROPIC_API_KEY");
+const redact = (s: string) => s.replace(/AQ\.[A-Za-z0-9_-]+/g, "[key]").replace(/AIza[^\s"']+/g, "[key]").replace(/key=[^&\s"]+/gi, "key=[key]");
+
+const MODELS = ["gemini-3.1-flash-lite-preview", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.8-flash", "gemini-3-flash-preview"];
 
 const hits = new Map<string, number[]>();
 let day = "", dayCount = 0;
@@ -47,6 +50,52 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
 
 class RateLimited extends Error {}
+
+async function askGemini(key: string, prompt: string): Promise<string> {
+  const google = createGoogleGenerativeAI({ apiKey: key });
+  const models = [...new Set([env("GEMINI_MODEL"), ...MODELS].filter((m): m is string => !!m))];
+  let lastErr = "Gemini : aucun modèle n’a répondu";
+  let only429 = true;
+  for (const id of models) {
+    try {
+      const { text } = await generateText({
+        model: google(id),
+        prompt,
+        temperature: 0.3,
+      });
+      if (text?.trim()) {
+        console.info("[api/conseil] Gemini", id, "ok");
+        return text;
+      }
+      only429 = false;
+      lastErr = `Gemini ${id} réponse vide`;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      lastErr = `Gemini ${id} ${msg}`;
+      console.warn("[api/conseil]", lastErr);
+      if (/429|rate limit/i.test(msg)) continue;
+      only429 = false;
+    }
+  }
+  if (env("AI_GATEWAY_API_KEY") || process.env.VERCEL) {
+    try {
+      const { text } = await generateText({
+        model: "google/gemini-3.8-flash",
+        prompt,
+        temperature: 0.3,
+      });
+      if (text?.trim()) {
+        console.info("[api/conseil] AI Gateway ok");
+        return text;
+      }
+    } catch (e) {
+      lastErr = e instanceof Error ? `Gateway ${e.message}` : lastErr;
+      console.warn("[api/conseil]", lastErr);
+    }
+  }
+  if (only429) throw new RateLimited();
+  throw new Error(redact(lastErr));
+}
 
 async function askClaude(key: string, prompt: string, schema: Record<string, unknown>): Promise<string> {
   const Anthropic = (await import("@anthropic-ai/sdk")).default;
@@ -68,7 +117,20 @@ async function askClaude(key: string, prompt: string, schema: Record<string, unk
   }
 }
 
-export const GET: APIRoute = () => json({ enabled: !!(geminiKey() || claudeKey()) });
+export const GET: APIRoute = async ({ url }) => {
+  const gKey = geminiKey(), cKey = claudeKey();
+  const enabled = !!(gKey || cKey);
+  if (url.searchParams.get("ping") !== "1") return json({ enabled });
+  if (!gKey) return json({ enabled, ping: "no-key" }, 503);
+  const t0 = Date.now();
+  try {
+    const text = await askGemini(gKey, 'Réponds uniquement le mot "ok".');
+    return json({ enabled, ping: "ok", ms: Date.now() - t0, sample: text.slice(0, 80) });
+  } catch (e) {
+    const detail = redact(e instanceof Error ? e.message : String(e));
+    return json({ enabled, ping: "fail", ms: Date.now() - t0, detail }, 502);
+  }
+};
 
 export const POST: APIRoute = async ({ request, clientAddress, url }) => {
   const gKey = geminiKey(), cKey = claudeKey();
@@ -96,17 +158,17 @@ export const POST: APIRoute = async ({ request, clientAddress, url }) => {
   if (!allow(ip)) return json({ error: "rate_limited" }, 429);
 
   try {
-    const text = gKey ? await generateGeminiJson(gKey, job.prompt, job.schema) : await askClaude(cKey!, job.prompt, job.schema);
+    const text = gKey ? await askGemini(gKey, job.prompt) : await askClaude(cKey!, job.prompt, job.schema);
     const analysis = job.parse(text);
     if (!analysis) {
       console.error("[api/conseil] réponse illisible :", text.slice(0, 500));
-      return json({ error: "default" }, 502);
+      return json({ error: "default", detail: "réponse illisible" }, 502);
     }
     return json({ analysis });
   } catch (e) {
-    if (e instanceof RateLimited || (e as Error & { rateLimited?: boolean }).rateLimited) return json({ error: "rate_limited" }, 429);
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error("[api/conseil]", msg);
-    return json({ error: "default" }, 502);
+    if (e instanceof RateLimited) return json({ error: "rate_limited" }, 429);
+    const detail = redact(e instanceof Error ? e.message : String(e));
+    console.error("[api/conseil]", detail);
+    return json({ error: "default", detail }, 502);
   }
 };
