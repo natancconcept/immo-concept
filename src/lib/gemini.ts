@@ -1,6 +1,7 @@
-/* Appel Gemini (generateContent). Utilisé au serveur et, en secours, dans le navigateur :
-   l’offre gratuite refuse souvent les IP des datacenters Vercel, alors que le navigateur du visiteur passe. */
-const MODELS = ["gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-3-flash-preview", "gemini-3.5-flash"];
+/* Appel Gemini (generateContent) depuis le navigateur, en secours si le serveur Vercel échoue.
+   Gemini n’accepte pas additionalProperties dans response_schema : on demande du JSON
+   via responseMimeType, le prompt décrit déjà le format, et on vérifie côté client. */
+const MODELS = ["gemini-3.1-flash-lite-preview", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.8-flash"];
 
 export function geminiClientKey() {
   const raw = (import.meta.env.GEMINI_API_KEY || import.meta.env.PUBLIC_GEMINI_API_KEY || "") as string;
@@ -17,55 +18,48 @@ function readText(data: Record<string, unknown>): string {
   return typeof data.text === "string" ? data.text : "";
 }
 
-export async function generateGeminiJson(key: string, prompt: string, schema: object, signal?: AbortSignal) {
+export async function generateGeminiJson(key: string, prompt: string, _schema: object, signal?: AbortSignal) {
   const models = [...new Set([((import.meta.env.GEMINI_MODEL as string) || "").trim(), ...MODELS].filter(Boolean))];
   const browser = typeof window !== "undefined";
   let lastErr = "Gemini : aucun modèle n’a répondu";
   let only429 = true;
   for (const model of models) {
     if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
-    for (const withSchema of [true, false]) {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
-      let res: Response;
-      try {
-        res = await fetch(url, {
-          method: "POST",
-          signal,
-          ...(browser ? {} : { referrerPolicy: "no-referrer" as const }),
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.3,
-              responseMimeType: "application/json",
-              ...(withSchema ? { responseSchema: schema } : {}),
-            },
-          }),
-        });
-      } catch (e) {
-        if ((e as Error).name === "AbortError") throw e;
-        lastErr = e instanceof Error ? e.message : String(e);
-        only429 = false;
-        break;
-      }
-      const raw = await res.text();
-      if (res.status === 429) {
-        lastErr = `Gemini ${model} 429`;
-        break;
-      }
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: "POST",
+        signal,
+        ...(browser ? {} : { referrerPolicy: "no-referrer" as const }),
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.3, responseMimeType: "application/json" },
+        }),
+      });
+    } catch (e) {
+      if ((e as Error).name === "AbortError") throw e;
+      lastErr = e instanceof Error ? e.message : String(e);
       only429 = false;
-      if (res.status === 400 && withSchema) continue;
-      if (!res.ok) {
-        lastErr = `Gemini ${model} ${res.status} ${raw.slice(0, 220)}`;
-        if (/API[_ ]key|PERMISSION|not valid|referer|blocked/i.test(raw)) throw new Error(lastErr);
-        break;
-      }
-      let data: Record<string, unknown> = {};
-      try { data = JSON.parse(raw) } catch { lastErr = `Gemini ${model} JSON illisible`; continue }
-      const text = readText(data);
-      if (text.trim()) return text;
-      lastErr = `Gemini ${model} réponse vide`;
+      continue;
     }
+    const raw = await res.text();
+    if (res.status === 429) {
+      lastErr = `Gemini ${model} 429`;
+      continue;
+    }
+    only429 = false;
+    if (!res.ok) {
+      lastErr = `Gemini ${model} ${res.status} ${raw.slice(0, 220)}`;
+      if (/API[_ ]key|PERMISSION|not valid|referer|blocked/i.test(raw)) throw new Error(lastErr);
+      continue;
+    }
+    let data: Record<string, unknown> = {};
+    try { data = JSON.parse(raw) } catch { lastErr = `Gemini ${model} JSON illisible`; continue }
+    const text = readText(data);
+    if (text.trim()) return text;
+    lastErr = `Gemini ${model} réponse vide`;
   }
   const err = new Error(lastErr);
   if (only429) (err as Error & { rateLimited?: boolean }).rateLimited = true;

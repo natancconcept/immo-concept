@@ -62,6 +62,7 @@ async function askGemini(key: string, prompt: string): Promise<string> {
         model: google(id),
         prompt,
         temperature: 0.3,
+        providerOptions: { google: { structuredOutputs: false } },
       });
       if (text?.trim()) {
         console.info("[api/conseil] Gemini", id, "ok");
@@ -83,6 +84,7 @@ async function askGemini(key: string, prompt: string): Promise<string> {
         model: "google/gemini-3.8-flash",
         prompt,
         temperature: 0.3,
+        providerOptions: { google: { structuredOutputs: false } },
       });
       if (text?.trim()) {
         console.info("[api/conseil] AI Gateway ok");
