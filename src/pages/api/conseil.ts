@@ -1,7 +1,6 @@
 /* Analyses rédigées par l'IA.
-   Montage Vercel officiel : AI SDK (`ai` + `@ai-sdk/google`), clé GEMINI_API_KEY
-   ou GOOGLE_GENERATIVE_AI_API_KEY. Si l’appel direct Google échoue, on tente
-   la AI Gateway Vercel (`AI_GATEWAY_API_KEY` ou OIDC sur Vercel). */
+   Montage Vercel : AI SDK (`ai` + `@ai-sdk/google`), clé GEMINI_API_KEY
+   ou GOOGLE_GENERATIVE_AI_API_KEY. */
 import type { APIRoute } from "astro";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { generateText } from "ai";
@@ -76,23 +75,6 @@ async function askGemini(key: string, prompt: string): Promise<string> {
       console.warn("[api/conseil]", lastErr);
       if (/429|rate limit/i.test(msg)) continue;
       only429 = false;
-    }
-  }
-  if (env("AI_GATEWAY_API_KEY") || process.env.VERCEL) {
-    try {
-      const { text } = await generateText({
-        model: "google/gemini-3.8-flash",
-        prompt,
-        temperature: 0.3,
-        providerOptions: { google: { structuredOutputs: false } },
-      });
-      if (text?.trim()) {
-        console.info("[api/conseil] AI Gateway ok");
-        return text;
-      }
-    } catch (e) {
-      lastErr = e instanceof Error ? `Gateway ${e.message}` : lastErr;
-      console.warn("[api/conseil]", lastErr);
     }
   }
   if (only429) throw new RateLimited();
