@@ -1,7 +1,7 @@
 /* Envoie la demande par e-mail à l’agence (pas de stockage). */
 import type { APIRoute } from "astro";
 import { parseDraft } from "../../lib/leads";
-import { mailLead } from "../../lib/mail-lead";
+import { leadInbox, mailLead } from "../../lib/mail-lead";
 
 export const prerender = false;
 
@@ -38,10 +38,10 @@ export const POST: APIRoute = async ({ request, clientAddress, url }) => {
   if (!draft) return json({ error: "invalid" }, 400);
 
   try {
-    await mailLead(draft, url.origin);
-    return json({ ok: true, id: draft.id });
+    const mailed = await mailLead(draft);
+    return json({ ok: true, id: draft.id, mailed, inbox: mailed ? undefined : leadInbox() });
   } catch (e) {
     console.error("[api/lead]", e instanceof Error ? e.message : e);
-    return json({ error: "failed" }, 502);
+    return json({ error: "failed", mailed: false, inbox: leadInbox() }, 502);
   }
 };

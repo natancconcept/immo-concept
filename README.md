@@ -130,7 +130,7 @@ Si l’IA n’est pas configurée ou échoue, le questionnaire affiche son propr
 
 À la dernière étape du questionnaire et du simulateur, la personne indique son nom, son e‑mail et son téléphone. La demande est **envoyée par e‑mail** à `LEAD_EMAIL` (par défaut `natan.c.concept@gmail.com` dans `src/data/site.ts`). Elle n’est pas enregistrée sur le serveur ni sur `/admin` pour le moment.
 
-L’envoi utilise [Resend](https://resend.com) si `RESEND_API_KEY` est défini, sinon [FormSubmit](https://formsubmit.co) (la première demande envoie un e-mail de confirmation à cliquer une fois).
+L’envoi utilise [Resend](https://resend.com) si `RESEND_API_KEY` est défini. Sinon le navigateur envoie via [FormSubmit](https://formsubmit.co) (FormSubmit refuse les appels depuis le serveur Vercel). La première demande envoie un e-mail « Activate Form » à cliquer une fois ; les messages sont alors délivrés, y compris ceux déjà en file.
 
 Le formulaire indique aux visiteurs que leurs coordonnées servent uniquement à les recontacter (lien vers les mentions légales).
 
