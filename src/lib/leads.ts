@@ -33,9 +33,14 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX = 2000;
 
 const env = (k: string): string | undefined => {
-  const v = process.env[k] || import.meta.env[k];
-  return typeof v === "string" && v ? v : undefined;
+  const fromProc = process.env[k];
+  if (typeof fromProc === "string" && fromProc.trim()) return fromProc.trim();
+  const fromAstro = (import.meta.env as Record<string, unknown>)[k];
+  if (typeof fromAstro === "string" && fromAstro.trim()) return fromAstro.trim();
+  return undefined;
 };
+
+const vercelBlobReady = () => !!(env("BLOB_READ_WRITE_TOKEN") || env("BLOB_STORE_ID"));
 
 const clip = (s: string, max: number) => s.replace(/[\u0000-\u001F\u007F]/g, "").trim().slice(0, max);
 
@@ -166,8 +171,8 @@ async function store(lead: Lead) {
 }
 
 export async function saveLead(draft: LeadDraft): Promise<Lead> {
-  if (backend() === "vercel" && !env("BLOB_READ_WRITE_TOKEN") && !env("BLOB_STORE_ID")) {
-    throw new Error("Stockage Vercel Blob non configuré (BLOB_READ_WRITE_TOKEN).");
+  if (backend() === "vercel" && !vercelBlobReady()) {
+    throw new Error("unconfigured");
   }
   return exclusive(async () => {
     const prev = await load(draft.id);

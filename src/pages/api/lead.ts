@@ -1,6 +1,7 @@
-/* Enregistre la demande laissée à la fin du questionnaire ou du simulateur. */
+/* Envoie la demande par e-mail à l’agence (pas de stockage). */
 import type { APIRoute } from "astro";
-import { parseDraft, saveLead } from "../../lib/leads";
+import { parseDraft } from "../../lib/leads";
+import { mailLead } from "../../lib/mail-lead";
 
 export const prerender = false;
 
@@ -37,8 +38,8 @@ export const POST: APIRoute = async ({ request, clientAddress, url }) => {
   if (!draft) return json({ error: "invalid" }, 400);
 
   try {
-    const lead = await saveLead(draft);
-    return json({ ok: true, id: lead.id });
+    await mailLead(draft, url.origin);
+    return json({ ok: true, id: draft.id });
   } catch (e) {
     console.error("[api/lead]", e instanceof Error ? e.message : e);
     return json({ error: "failed" }, 502);

@@ -39,4 +39,4 @@ export async function sendLead(payload: LeadPayload): Promise<"ok" | "rate" | "f
 export const leadFailMessage = (status: "rate" | "fail") =>
   status === "rate"
     ? "Trop de tentatives. Réessayez dans quelques minutes."
-    : "Nous n’avons pas pu enregistrer vos coordonnées. Réessayez dans un instant.";
+    : "Nous n’avons pas pu envoyer vos coordonnées. Réessayez dans un instant.";

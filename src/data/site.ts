@@ -8,7 +8,9 @@ export const SITE = {
   /** Numéro WhatsApp au format international, chiffres seulement (provisoire). */
   whatsapp: "972500000000",
   /** E-mail de contact (provisoire). */
-  email: "contact@example.com",
+  email: "natan.c.concept@gmail.com",
+  /** Demandes du questionnaire et du simulateur : envoyées ici, pas stockées sur le site. */
+  leadEmail: "natan.c.concept@gmail.com",
   /** Adresse définitive du site, sans « / » final. Peut aussi être donnée par la variable SITE_URL. */
   url: "https://www.example.com",
   /** Années d'expérience affichées sur le site. */

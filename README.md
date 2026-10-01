@@ -128,24 +128,11 @@ Si l’IA n’est pas configurée ou échoue, le questionnaire affiche son propr
 
 ## Demandes (leads)
 
-À la dernière étape du questionnaire et du simulateur, la personne indique son nom, son e‑mail et son téléphone. La demande (coordonnées et réponses) est enregistrée, même si elle n’envoie pas le message WhatsApp.
+À la dernière étape du questionnaire et du simulateur, la personne indique son nom, son e‑mail et son téléphone. La demande est **envoyée par e‑mail** à `LEAD_EMAIL` (par défaut `natan.c.concept@gmail.com` dans `src/data/site.ts`). Elle n’est pas enregistrée sur le serveur ni sur `/admin` pour le moment.
 
-L’agence les retrouve sur la page **`/admin`** (adresse non affichée sur le site, exclue de Google), protégée par le mot de passe `ADMIN_PASSWORD` (dans `.env` en local, ou dans les variables d’environnement de Netlify / Vercel). Choisissez un mot de passe long et ne le partagez qu’avec l’équipe.
-
-Sur cette page :
-
-- chaque demande affiche le nom, l’outil utilisé (questionnaire ou simulateur, et le projet), la date, le message éventuel et toutes les réponses ;
-- boutons **WhatsApp** (message prérempli avec le prénom), **appeler** et **e‑mail** ;
-- suivi : **À rappeler** / **Traité**, avec les compteurs ;
-- filtre par outil et **recherche** (nom, ville, téléphone…) ;
-- **Exporter (Excel)** : fichier CSV des demandes affichées, qui s’ouvre dans Excel ;
-- **Supprimer** une demande, par exemple si la personne demande l’effacement de ses données.
+L’envoi utilise [Resend](https://resend.com) si `RESEND_API_KEY` est défini, sinon [FormSubmit](https://formsubmit.co) (la première demande envoie un e-mail de confirmation à cliquer une fois).
 
 Le formulaire indique aux visiteurs que leurs coordonnées servent uniquement à les recontacter (lien vers les mentions légales).
-
-- **En local** : les demandes sont dans le fichier `.data/leads.json` (non versionné).
-- **Sur Netlify** : elles sont gardées dans Netlify Blobs, sans réglage supplémentaire.
-- **Sur Vercel** : créez un magasin Blob (Storage › Blob) et renseignez `BLOB_READ_WRITE_TOKEN`. Les fichiers sont privés.
 
 ## Mettre le site en ligne
 
@@ -163,7 +150,7 @@ Dans les deux cas, commencez par envoyer le projet sur GitHub (ou GitLab / Bitbu
 ### Vercel
 
 1. Sur [vercel.com/new](https://vercel.com/new), importez le dépôt. Le framework Astro est détecté.
-2. **Settings › Environment Variables** : ajoutez `GEMINI_API_KEY` (ou `ANTHROPIC_API_KEY`), `SITE_URL`, `ADMIN_PASSWORD` et `BLOB_READ_WRITE_TOKEN` (magasin Blob, pour enregistrer les demandes).
+2. **Settings › Environment Variables** : `GEMINI_API_KEY` (ou `ANTHROPIC_API_KEY`), `SITE_URL`, et éventuellement `LEAD_EMAIL` / `RESEND_API_KEY`. Cochez **Production** et **Preview**.
 3. Déployez.
 
 ### Nom de domaine

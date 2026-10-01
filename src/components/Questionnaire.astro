@@ -159,7 +159,7 @@ const { goal, readQuery = false } = Astro.props;
       } else {
         h += `<h3>Merci ${first}, votre demande est prête.</h3><div class="summary">${esc(summaryText())}</div>`;
       }
-      h += `<div class="send"><p>Vos coordonnées sont enregistrées : un conseiller peut vous rappeler. Vous pouvez aussi envoyer le détail sur WhatsApp.</p>
+      h += `<div class="send"><p>Vos coordonnées ont été envoyées à l’agence : un conseiller peut vous rappeler. Vous pouvez aussi envoyer le détail sur WhatsApp.</p>
           <a class="btn btn-wa" id="waBtn" href="${esc(waLink(summaryText()))}" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa"/></svg>Envoyer sur WhatsApp</a>
           <div class="wa-num">Ou écrivez‑nous au <code id="waNum">${phoneDisplay()}</code><button type="button" class="copy" id="copyNum">Copier</button>${SITE.provisional ? `<span class="ph">provisoire</span>` : ""}</div></div>
           <div class="form-nav" style="margin-top:18px"><button type="button" class="btn btn-ghost" id="editAns">Modifier mes réponses</button><button type="button" class="btn btn-ghost" id="restart">Nouvelle demande</button></div>`;
