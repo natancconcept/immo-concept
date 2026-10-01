@@ -150,8 +150,9 @@ Dans les deux cas, commencez par envoyer le projet sur GitHub (ou GitLab / Bitbu
 ### Vercel
 
 1. Sur [vercel.com/new](https://vercel.com/new), importez le dépôt. Le framework Astro est détecté.
-2. **Settings › Environment Variables** : `GEMINI_API_KEY` (ou `ANTHROPIC_API_KEY`), `SITE_URL`, et éventuellement `LEAD_EMAIL` / `RESEND_API_KEY`. Cochez **Production** et **Preview**.
-3. Déployez.
+2. Sur le plan Hobby, le dépôt GitHub doit être **public** (un dépôt privé ne se déploie que si le commit vient du propriétaire du projet Vercel).
+3. **Settings › Environment Variables** : `GEMINI_API_KEY` (ou `ANTHROPIC_API_KEY`), `SITE_URL`, et éventuellement `LEAD_EMAIL` / `RESEND_API_KEY`. Cochez **Production** et **Preview**.
+4. Déployez.
 
 ### Nom de domaine
 
