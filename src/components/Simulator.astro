@@ -20,7 +20,8 @@ const { mode, city } = Astro.props;
   import { fmt, shek, shekK, esc } from "../lib/format";
   import { waLink } from "../data/site";
   import { contactError, leadFailMessage, sendLead } from "../lib/send-lead";
-  import type { SimAnalysis } from "../lib/sim-analyse";
+  import { SIM_SCHEMA, parseSimAnalysis, sanitizeSimAnswers, simPrompt, type SimAnalysis } from "../lib/sim-analyse";
+  import { fetchConseil, geminiClientKey } from "../lib/gemini";
   import { SIM_TIPS, SIM_WAIT_MS, aiWaitHTML, bindAiRead, bindAiWait, deskOpen, shuffle, simStages } from "../lib/ai-wait";
 
   const root = document.getElementById("simw");
@@ -191,7 +192,7 @@ const { mode, city } = Astro.props;
 
     /* ---------- Analyse rédigée par l'IA (route serveur /api/conseil) ---------- */
     const AI_STORE = "cc-sim-analyse-v1";
-    let aiAvailable: Promise<boolean> | null = fetch("/api/conseil").then((r) => (r.ok ? r.json() : { enabled: false })).then((j) => !!j.enabled).catch(() => false);
+    let aiAvailable: Promise<boolean> | null = fetch("/api/conseil").then((r) => (r.ok ? r.json() : { enabled: false })).then((j) => !!j.enabled || !!geminiClientKey()).catch(() => !!geminiClientKey());
     let aiCtl: AbortController | null = null;
     let pendingAnalysis: SimAnalysis | null = null;
     let aiStatus: "idle" | "ready" | "off" | "fail" = "idle";
@@ -251,17 +252,19 @@ const { mode, city } = Astro.props;
       aiCtl = ctl;
       const t = window.setTimeout(() => ctl.abort(), SIM_WAIT_MS);
       try {
-        const res = await fetch("/api/conseil", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sim: simInput() }), signal: ctl.signal });
-        const j = await res.json().catch(() => ({}));
+        const sim = sanitizeSimAnswers(simInput());
+        const out = sim
+          ? await fetchConseil({ payload: { sim: simInput() }, prompt: simPrompt(sim), schema: SIM_SCHEMA, parse: parseSimAnalysis, signal: ctl.signal })
+          : { error: "default" } as const;
         if (key !== simKey() || cur !== "wait") return;
-        if (res.ok && j.analysis) {
-          pendingAnalysis = j.analysis as SimAnalysis;
+        if ("analysis" in out) {
+          pendingAnalysis = out.analysis;
           try { sessionStorage.setItem(AI_STORE, JSON.stringify({ key, analysis: pendingAnalysis })) } catch {}
           aiStatus = "ready";
-        } else if (j.error === "disabled") {
+        } else if (out.error === "disabled") {
           pendingAnalysis = null; aiStatus = "off";
         } else {
-          pendingAnalysis = null; aiStatus = "fail"; aiError = j.error || "default";
+          pendingAnalysis = null; aiStatus = "fail"; aiError = out.error || "default";
         }
       } catch (e) {
         if (cur !== "wait") return;
@@ -302,7 +305,7 @@ const { mode, city } = Astro.props;
       if (!document.getElementById("simAi")) return;
       const hit = force ? null : cachedAI();
       if (hit) return aiZone(aiHTML(hit));
-      aiAvailable ||= fetch("/api/conseil").then((r) => (r.ok ? r.json() : { enabled: false })).then((j) => !!j.enabled).catch(() => false);
+      aiAvailable ||= fetch("/api/conseil").then((r) => (r.ok ? r.json() : { enabled: false })).then((j) => !!j.enabled || !!geminiClientKey()).catch(() => !!geminiClientKey());
       if (!(await aiAvailable)) return aiZone("");
       if (!auto && !force) return aiZone(`${aiHead}<p>Vous avez modifié la simulation. <button type="button" class="link-btn" id="simAiRun">Analyser ces nouveaux chiffres</button></p>`);
       const key = simKey();
@@ -313,17 +316,19 @@ const { mode, city } = Astro.props;
       const t = window.setTimeout(() => ctl.abort(), SIM_WAIT_MS);
       let error = "default";
       try {
-        const res = await fetch("/api/conseil", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sim: simInput() }), signal: ctl.signal });
-        const j = await res.json().catch(() => ({}));
+        const sim = sanitizeSimAnswers(simInput());
+        const out = sim
+          ? await fetchConseil({ payload: { sim: simInput() }, prompt: simPrompt(sim), schema: SIM_SCHEMA, parse: parseSimAnalysis, signal: ctl.signal })
+          : { error: "default" } as const;
         if (key !== simKey()) return;
-        if (res.ok && j.analysis) {
-          pendingAnalysis = j.analysis as SimAnalysis;
+        if ("analysis" in out) {
+          pendingAnalysis = out.analysis;
           try { sessionStorage.setItem(AI_STORE, JSON.stringify({ key, analysis: pendingAnalysis })) } catch {}
           aiStatus = "ready";
           return aiZone(aiHTML(pendingAnalysis));
         }
-        if (j.error === "disabled") return aiZone("");
-        error = j.error || "default";
+        if (out.error === "disabled") return aiZone("");
+        error = out.error || "default";
       } catch (e) {
         if ((e as Error).name === "AbortError" && key !== simKey()) return;
       } finally {

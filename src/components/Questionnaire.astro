@@ -17,10 +17,11 @@ const { goal, readQuery = false } = Astro.props;
   import { GOALS, type Answers, type GoalId, type Question } from "../data/questionnaire";
   import { SITE, phoneDisplay, waLink } from "../data/site";
   import { recommend, profileText, isRent, budgetRange, type Reco } from "../lib/recommend";
-  import type { Analysis } from "../lib/analyse";
+  import { ANALYSIS_SCHEMA, analysisPrompt, parseAnalysis, type Analysis } from "../lib/analyse";
   import { CITIES } from "../data/cities";
   import { fmt, esc } from "../lib/format";
   import { contactError, leadFailMessage, sendLead } from "../lib/send-lead";
+  import { fetchConseil, geminiClientKey } from "../lib/gemini";
   import { OLIM_STAGES, OLIM_TIPS, OLIM_WAIT_MS, aiWaitHTML, bindAiRead, bindAiWait, deskOpen, shuffle } from "../lib/ai-wait";
 
   const card = document.getElementById("formCard");
@@ -210,7 +211,7 @@ const { goal, readQuery = false } = Astro.props;
     }
 
     /* ---------- Conseil rédigé par l'IA (route serveur /api/conseil) ---------- */
-    let aiAvailable: Promise<boolean> | null = fetch("/api/conseil").then((r) => (r.ok ? r.json() : { enabled: false })).then((j) => !!j.enabled).catch(() => false);
+    let aiAvailable: Promise<boolean> | null = fetch("/api/conseil").then((r) => (r.ok ? r.json() : { enabled: false })).then((j) => !!j.enabled || !!geminiClientKey()).catch(() => !!geminiClientKey());
     let aiCtl: AbortController | null = null;
     const AI_STORE = "cc-analyse-v1";
     const AI_ERRORS: Record<string, string> = {
@@ -256,17 +257,22 @@ const { goal, readQuery = false } = Astro.props;
         const t = window.setTimeout(() => ctl.abort(), OLIM_WAIT_MS);
         let error = "default";
         try {
-          const res = await fetch("/api/conseil", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ answers: state.a }), signal: ctl.signal });
-          const j = await res.json().catch(() => ({}));
+          const out = await fetchConseil({
+            payload: { answers: state.a },
+            prompt: analysisPrompt(state.a),
+            schema: ANALYSIS_SCHEMA,
+            parse: parseAnalysis,
+            signal: ctl.signal,
+          });
           if (gen !== aiGen) return;
-          if (res.ok && j.analysis) {
-            lastAnalysis = j.analysis as Analysis;
+          if ("analysis" in out) {
+            lastAnalysis = out.analysis;
             try { sessionStorage.setItem(AI_STORE, JSON.stringify({ key: answersKey(), analysis: lastAnalysis })) } catch {}
             aiSettled = true;
             return renderForm();
           }
-          if (j.error === "disabled") { lastAnalysis = null; aiSettled = true; return renderForm() }
-          error = j.error || "default";
+          if (out.error === "disabled") { lastAnalysis = null; aiSettled = true; return renderForm() }
+          error = out.error || "default";
         } catch (e) {
           if ((e as Error).name === "AbortError" && gen !== aiGen) return;
         } finally {
