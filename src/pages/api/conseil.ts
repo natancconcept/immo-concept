@@ -33,6 +33,7 @@ const redact = (s: string) => s.replace(/AQ\.[A-Za-z0-9_-]+/g, "[key]").replace(
 const MODELS = ["gemini-3.1-flash-lite-preview", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.8-flash", "gemini-3-flash-preview"];
 
 const hits = new Map<string, number[]>();
+const simOnce = new Map<string, string>();
 let day = "", dayCount = 0;
 function allow(ip: string): boolean {
   const now = Date.now(), today = new Date().toISOString().slice(0, 10);
@@ -139,6 +140,9 @@ export const POST: APIRoute = async ({ request, clientAddress, url }) => {
 
   let ip = "inconnue";
   try { ip = clientAddress } catch { ip = request.headers.get("x-forwarded-for")?.split(",")[0].trim() || ip }
+  const today = new Date().toISOString().slice(0, 10);
+  const isSim = body.sim !== undefined;
+  if (isSim && simOnce.get(ip) === today) return json({ error: "sim_limit" }, 429);
   if (!allow(ip)) return json({ error: "rate_limited" }, 429);
 
   try {
@@ -148,6 +152,7 @@ export const POST: APIRoute = async ({ request, clientAddress, url }) => {
       console.error("[api/conseil] réponse illisible :", text.slice(0, 500));
       return json({ error: "default", detail: "réponse illisible" }, 502);
     }
+    if (isSim) simOnce.set(ip, today);
     return json({ analysis });
   } catch (e) {
     if (e instanceof RateLimited) return json({ error: "rate_limited" }, 429);

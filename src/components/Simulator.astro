@@ -119,6 +119,7 @@ const { mode, city } = Astro.props;
         if (pendingAnalysis) aiZone(aiHTML(pendingAnalysis));
         else if (aiStatus === "off") aiZone("");
         else if (aiStatus === "fail") aiFail();
+        else if (aiStatus === "limit") aiZone(aiContact());
         else void runAI(true);
         if (st.contactDone) void pushLead();
         return;
@@ -192,10 +193,13 @@ const { mode, city } = Astro.props;
 
     /* ---------- Analyse rédigée par l'IA (route serveur /api/conseil) ---------- */
     const AI_STORE = "cc-sim-analyse-v1";
+    const AI_ONCE = "cc-sim-ai-once-v1";
+    const simAiUsed = () => { try { return localStorage.getItem(AI_ONCE) === "1" } catch { return false } };
+    const markSimAi = () => { try { localStorage.setItem(AI_ONCE, "1") } catch {} };
     let aiAvailable: Promise<boolean> | null = fetch("/api/conseil").then((r) => (r.ok ? r.json() : { enabled: false })).then((j) => !!j.enabled).catch(() => false);
     let aiCtl: AbortController | null = null;
     let pendingAnalysis: SimAnalysis | null = null;
-    let aiStatus: "idle" | "ready" | "off" | "fail" = "idle";
+    let aiStatus: "idle" | "ready" | "off" | "fail" | "limit" = "idle";
     let stopWait: (() => void) | null = null;
     let waitLaunched = false;
     const simInput = () => ({ mode: st.mode, city: st.city, surface: st.surface, situation: st.situation, apport: st.apport ?? 1, years: st.years ?? 25, reno: st.reno });
@@ -238,14 +242,23 @@ const { mode, city } = Astro.props;
       });
       if (!waitLaunched) { waitLaunched = true; void finishWait() }
     }
+    function aiContact(lead = "") {
+      const wa = waLink("Bonjour, j’ai utilisé le simulateur et je souhaite affiner mon projet avec un conseiller.");
+      return `${aiHead}${lead ? `<p>${lead}</p>` : ""}
+        <p>L’analyse personnalisée est limitée à <strong>une simulation</strong>.</p>
+        <p>Pour étudier un autre scénario, contactez-nous : un conseiller C.C. Concept se fera un plaisir de vous accompagner, sans engagement.</p>
+        <p class="sim-ai-cta"><a class="btn btn-wa" href="${esc(wa)}" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa"/></svg>Parler à un conseiller</a></p>`;
+    }
     async function openResult() {
       pendingAnalysis = cachedAI();
       if (pendingAnalysis) { aiStatus = "ready"; go("result"); return }
+      if (simAiUsed()) { pendingAnalysis = null; aiStatus = "limit"; go("result"); return }
       waitLaunched = false;
       go("wait");
     }
     async function finishWait() {
       if (!(await aiAvailable!)) { aiStatus = "off"; if (cur === "wait") go("result"); return }
+      if (simAiUsed()) { aiStatus = "limit"; if (cur === "wait") go("result"); return }
       const key = simKey();
       aiCtl?.abort();
       const ctl = new AbortController();
@@ -256,10 +269,13 @@ const { mode, city } = Astro.props;
         if (key !== simKey() || cur !== "wait") return;
         if ("analysis" in out) {
           pendingAnalysis = out.analysis;
+          markSimAi();
           try { sessionStorage.setItem(AI_STORE, JSON.stringify({ key, analysis: pendingAnalysis })) } catch {}
           aiStatus = "ready";
         } else if (out.error === "disabled") {
           pendingAnalysis = null; aiStatus = "off";
+        } else if (out.error === "sim_limit") {
+          pendingAnalysis = null; aiStatus = "limit"; markSimAi();
         } else {
           pendingAnalysis = null; aiStatus = "fail"; aiError = out.error || "default";
         }
@@ -281,6 +297,7 @@ const { mode, city } = Astro.props;
       document.getElementById("simAiRun")?.addEventListener("click", () => runAI(true, true));
     }
     function aiFail() {
+      if (aiError === "sim_limit") return aiZone(aiContact());
       const msg = aiError === "rate_limited"
         ? "Trop de demandes pour le moment. Réessayez dans quelques minutes."
         : aiError === "timeout"
@@ -295,13 +312,14 @@ const { mode, city } = Astro.props;
         : "";
       return `${aiHead}<div class="ai-read"><p class="ai-synth">${esc(an.synthese)}</p><button type="button" class="ai-more" hidden>Lire la suite</button></div>
         <div class="ai-folds">${fold("Points forts", an.forces, "plus")}${fold("Vigilance", an.vigilance, "minus")}${fold("Pour avancer", an.conseils, "next", true)}</div>
-        <p class="note">Un conseiller vérifie cette analyse avec vous.</p>`;
+        <p class="note">Cette analyse est unique. Pour un autre scénario, un conseiller C.C. Concept se fera un plaisir de vous aider.</p>`;
     }
     /** `auto` : lancé à l'affichage du résultat. Après un réglage, on attend un clic pour ménager le quota. */
     async function runAI(auto: boolean, force = false) {
       if (!document.getElementById("simAi")) return;
       const hit = force ? null : cachedAI();
       if (hit) return aiZone(aiHTML(hit));
+      if (simAiUsed()) return aiZone(aiContact("Vous avez déjà bénéficié de l’analyse personnalisée."));
       aiAvailable ||= fetch("/api/conseil").then((r) => (r.ok ? r.json() : { enabled: false })).then((j) => !!j.enabled).catch(() => false);
       if (!(await aiAvailable)) return aiZone("");
       if (!auto && !force) return aiZone(`${aiHead}<p>Vous avez modifié la simulation. <button type="button" class="link-btn" id="simAiRun">Analyser ces nouveaux chiffres</button></p>`);
@@ -317,11 +335,13 @@ const { mode, city } = Astro.props;
         if (key !== simKey()) return;
         if ("analysis" in out) {
           pendingAnalysis = out.analysis;
+          markSimAi();
           try { sessionStorage.setItem(AI_STORE, JSON.stringify({ key, analysis: pendingAnalysis })) } catch {}
           aiStatus = "ready";
           return aiZone(aiHTML(pendingAnalysis));
         }
         if (out.error === "disabled") return aiZone("");
+        if (out.error === "sim_limit") { markSimAi(); return aiZone(aiContact()) }
         error = out.error || "default";
       } catch (e) {
         if ((e as Error).name === "AbortError" && key !== simKey()) return;
@@ -329,6 +349,7 @@ const { mode, city } = Astro.props;
         window.clearTimeout(t);
       }
       aiError = error;
+      if (error === "sim_limit") return aiZone(aiContact());
       aiZone(`${aiHead}<p class="warn">${error === "rate_limited" ? "Trop de demandes pour le moment. Réessayez dans quelques minutes." : "L’analyse n’a pas pu être rédigée."} <button type="button" class="link-btn" id="simAiRun">Réessayer</button></p>`);
     }
 

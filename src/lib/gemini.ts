@@ -13,6 +13,7 @@ export async function fetchConseil<T>(opts: {
     const j = await res.json().catch(() => ({})) as { analysis?: T; error?: string };
     if (res.ok && j.analysis) return { analysis: j.analysis };
     if (j.error === "disabled") return { error: "disabled" };
+    if (j.error === "sim_limit") return { error: "sim_limit" };
     if (res.status === 429 || j.error === "rate_limited") return { error: "rate_limited" };
     return { error: j.error || "default" };
   } catch (e) {

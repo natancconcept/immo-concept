@@ -903,6 +903,7 @@ footer .logo-mark{background:var(--azure)}
 .sim-ai{margin:0 0 22px;padding:16px 18px;border-radius:var(--r);background:var(--bg-3)}
 .sim-ai .kicker{margin:0}
 .sim-ai .note{margin-top:12px;font-size:13px}
+.sim-ai-cta{margin:14px 0 0}
 
 /* Tablette et téléphone : réglages avant le détail, bouton d'action toujours visible */
 @media (max-width:900px){
