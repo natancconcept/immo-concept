@@ -193,9 +193,21 @@ const { mode, city } = Astro.props;
 
     /* ---------- Analyse rédigée par l'IA (route serveur /api/conseil) ---------- */
     const AI_STORE = "cc-sim-analyse-v1";
-    const AI_ONCE = "cc-sim-ai-once-v1";
-    const simAiUsed = () => { try { return localStorage.getItem(AI_ONCE) === "1" } catch { return false } };
-    const markSimAi = () => { try { localStorage.setItem(AI_ONCE, "1") } catch {} };
+    const AI_WEEK = "cc-sim-ai-week-v1";
+    const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+    const simAiUsed = () => {
+      try {
+        const raw = localStorage.getItem(AI_WEEK);
+        if (raw) return Date.now() - Number(raw) < WEEK_MS;
+        if (localStorage.getItem("cc-sim-ai-once-v1") === "1") {
+          localStorage.setItem(AI_WEEK, String(Date.now()));
+          localStorage.removeItem("cc-sim-ai-once-v1");
+          return true;
+        }
+      } catch {}
+      return false;
+    };
+    const markSimAi = () => { try { localStorage.setItem(AI_WEEK, String(Date.now())) } catch {} };
     let aiAvailable: Promise<boolean> | null = fetch("/api/conseil").then((r) => (r.ok ? r.json() : { enabled: false })).then((j) => !!j.enabled).catch(() => false);
     let aiCtl: AbortController | null = null;
     let pendingAnalysis: SimAnalysis | null = null;
@@ -245,8 +257,8 @@ const { mode, city } = Astro.props;
     function aiContact(lead = "") {
       const wa = waLink("Bonjour, j’ai utilisé le simulateur et je souhaite affiner mon projet avec un conseiller.");
       return `${aiHead}${lead ? `<p>${lead}</p>` : ""}
-        <p>L’analyse personnalisée est limitée à <strong>une simulation</strong>.</p>
-        <p>Pour étudier un autre scénario, contactez-nous : un conseiller C.C. Concept se fera un plaisir de vous accompagner, sans engagement.</p>
+        <p>L’analyse personnalisée est limitée à <strong>une simulation par semaine</strong>.</p>
+        <p>Pour étudier un autre scénario dès maintenant, contactez-nous : un conseiller C.C. Concept se fera un plaisir de vous accompagner, sans engagement.</p>
         <p class="sim-ai-cta"><a class="btn btn-wa" href="${esc(wa)}" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#wa"/></svg>Parler à un conseiller</a></p>`;
     }
     async function openResult() {
@@ -312,14 +324,14 @@ const { mode, city } = Astro.props;
         : "";
       return `${aiHead}<div class="ai-read"><p class="ai-synth">${esc(an.synthese)}</p><button type="button" class="ai-more" hidden>Lire la suite</button></div>
         <div class="ai-folds">${fold("Points forts", an.forces, "plus")}${fold("Vigilance", an.vigilance, "minus")}${fold("Pour avancer", an.conseils, "next", true)}</div>
-        <p class="note">Cette analyse est unique. Pour un autre scénario, un conseiller C.C. Concept se fera un plaisir de vous aider.</p>`;
+        <p class="note">Une analyse par semaine. Pour un autre scénario dès maintenant, un conseiller C.C. Concept se fera un plaisir de vous aider.</p>`;
     }
     /** `auto` : lancé à l'affichage du résultat. Après un réglage, on attend un clic pour ménager le quota. */
     async function runAI(auto: boolean, force = false) {
       if (!document.getElementById("simAi")) return;
       const hit = force ? null : cachedAI();
       if (hit) return aiZone(aiHTML(hit));
-      if (simAiUsed()) return aiZone(aiContact("Vous avez déjà bénéficié de l’analyse personnalisée."));
+      if (simAiUsed()) return aiZone(aiContact("Vous avez déjà bénéficié de l’analyse personnalisée cette semaine."));
       aiAvailable ||= fetch("/api/conseil").then((r) => (r.ok ? r.json() : { enabled: false })).then((j) => !!j.enabled).catch(() => false);
       if (!(await aiAvailable)) return aiZone("");
       if (!auto && !force) return aiZone(`${aiHead}<p>Vous avez modifié la simulation. <button type="button" class="link-btn" id="simAiRun">Analyser ces nouveaux chiffres</button></p>`);
