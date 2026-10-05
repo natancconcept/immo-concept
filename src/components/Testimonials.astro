@@ -1,16 +1,54 @@
 ---
-/* Avis clients. N'affiche que les vrais témoignages (sans `demo: true`) : rien tant qu'il n'y en a pas. */
+/* Avis clients. N'affiche que les vrais témoignages (sans `demo: true`). */
 import { PUBLIC_GALLERY, type TestimonialItem } from "../data/gallery";
-import GalleryCard from "./GalleryCard.astro";
 interface Props { limit?: number }
-const { limit = 3 } = Astro.props;
+const { limit = 5 } = Astro.props;
+const TONES = ["blue", "sun", "mint", "rose"] as const;
+const initials = (name: string) => name.replace(/[^A-Za-zÀ-ÿ ]/g, "").split(" ").filter((w) => w && w !== "et").map((s) => s[0]).slice(0, 2).join("");
 const items = PUBLIC_GALLERY.filter((g): g is TestimonialItem => g.type === "testi").slice(0, limit);
+const [hero, ...rest] = items;
 ---
-{items.length > 0 && (
-  <section class="alt">
+{hero && (
+  <section class="voices-sec">
     <div class="wrap">
-      <div class="sec-head"><h2>Ce que disent nos clients</h2></div>
-      <div class="gal">{items.map((it) => <GalleryCard item={it} />)}</div>
+      <div class="row-head">
+        <div class="sec-head">
+          <span class="kicker">Ils racontent</span>
+          <h2>Sans filtre, comme autour d’un café</h2>
+          <p class="lead">Des familles, des olim, des investisseurs. Chacun son projet, chacun ses mots.</p>
+        </div>
+        <a class="btn btn-ghost" href="/realisations">Tous les avis</a>
+      </div>
+
+      <article class="voice voice-lg">
+        <p class="voice-mark" aria-hidden="true">«</p>
+        <blockquote class="voice-text">{hero.text}</blockquote>
+        <div class="voice-who">
+          <span class="avatar ico-blue" aria-hidden="true">{initials(hero.name)}</span>
+          <div>
+            <b>{hero.name}</b>
+            <span>{hero.from} · {hero.project}</span>
+          </div>
+        </div>
+      </article>
+
+      {rest.length > 0 && (
+        <div class="voices">
+          {rest.map((it, i) => (
+            <article class="voice">
+              <div class="voice-who">
+                <span class={`avatar ico-${TONES[(i + 1) % TONES.length]}`} aria-hidden="true">{initials(it.name)}</span>
+                <div>
+                  <b>{it.name}</b>
+                  <span>{it.from}</span>
+                </div>
+              </div>
+              <blockquote class="voice-text">{it.text}</blockquote>
+              <p class="voice-tag">{it.project}</p>
+            </article>
+          ))}
+        </div>
+      )}
     </div>
   </section>
 )}

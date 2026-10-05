@@ -571,15 +571,45 @@ a.contact-way:hover{border-color:#AFC3D8}
 .play::after{content:"";margin-left:5px;border-left:18px solid var(--ink);border-top:11px solid transparent;border-bottom:11px solid transparent}
 .vid-note{position:absolute;z-index:1;left:12px;right:12px;bottom:12px;background:#fff;color:var(--ink);font-size:13px;font-weight:600;padding:8px 10px;border-radius:6px;text-align:center}
 .dur{position:absolute;z-index:1;right:12px;top:12px;background:rgba(18,34,56,.8);color:#fff;font-size:12px;font-weight:700;padding:3px 8px;border-radius:4px}
-.quote{font:500 17px/1.55 var(--serif);margin:0}
-.who-row{display:flex;align-items:center;gap:10px;margin-top:8px}
+.quote{font:500 17px/1.55 var(--serif);margin:6px 0 0}
+.who-row{display:flex;align-items:center;gap:10px}
 .avatar{width:40px;height:40px;border-radius:50%;background:var(--bg-3);color:var(--azure-deep);display:grid;place-items:center;font:700 14px var(--body);flex:0 0 40px}
 .who-row b{display:block;font-size:14.5px}
-.who-row span{font-size:13.5px;color:var(--ink-soft)}
+.who-row span{font-size:13.5px;color:var(--ink-soft);line-height:1.35}
 .stars{color:#D99A2B;letter-spacing:2px;font-size:14px}
+.gcard[data-type="testi"] .body{gap:12px;padding:22px 22px 24px}
+.gcard[data-type="testi"] .quote{font-size:16.5px;color:var(--ink)}
 .gal-more{display:flex;justify-content:center;margin-top:28px}
 @media (max-width:980px){.gal{grid-template-columns:1fr 1fr}}
 @media (max-width:620px){.gal{grid-template-columns:1fr}}
+
+/* ---------- avis clients : citations, pas des fiches identiques ---------- */
+.voices-sec{background:var(--bg-2)}
+.voice{position:relative;background:#fff;border:1px solid var(--line);border-radius:20px;padding:22px 22px 20px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow)}
+.voice-lg{padding:28px 28px 24px;margin-bottom:16px;background:var(--bg-3);border-color:transparent}
+.voice-lg .avatar{background:#fff;color:var(--azure-deep)}
+.voice-mark{font:700 56px/0.6 var(--serif);color:var(--azure);opacity:.35;margin:4px 0 8px}
+.voice-text{margin:0;font:500 17px/1.55 var(--serif);color:var(--ink)}
+.voice-lg .voice-text{font-size:clamp(19px,2.2vw,24px);line-height:1.45;max-width:46ch}
+.voice-who{display:flex;align-items:center;gap:12px;margin-top:auto}
+.voice-who .avatar{display:grid;place-items:center;width:44px;height:44px;flex:0 0 44px;border-radius:14px;font:700 13px var(--body)}
+.voice-who b{display:block;font-size:15px}
+.voice-who div span{display:block;font-size:13.5px;color:var(--ink-soft);line-height:1.35}
+.voice-tag{margin:0;font-size:12.5px;font-weight:700;letter-spacing:.04em;color:var(--azure-deep)}
+.voices{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:900px){
+  .voices{grid-template-columns:1fr}
+  .voice-lg{padding:22px 20px 20px}
+  .voice-lg .voice-text{font-size:20px;max-width:none}
+}
+@media (max-width:700px){
+  .voices-sec .row-head{align-items:flex-start}
+  .voices-sec .row-head .btn{padding:10px 14px;font-size:14px}
+  .voice,.voice-lg{padding:18px 18px 16px;border-radius:16px}
+  .voice-text{font-size:16px}
+  .voice-lg .voice-text{font-size:18.5px}
+  .voice-mark{font-size:44px;margin-bottom:4px}
+}
 
 /* ---------- pied de page ---------- */
 footer{background:#132A45;color:#C9D6E4;padding-block:64px calc(40px + env(safe-area-inset-bottom,0px));font-size:15px}
@@ -976,6 +1006,10 @@ footer .logo-mark{background:var(--azure)}
     margin-inline:-18px;padding:4px 18px 14px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   .city-grid::-webkit-scrollbar,.parcours::-webkit-scrollbar,.partners::-webkit-scrollbar,.related::-webkit-scrollbar,.gal::-webkit-scrollbar{display:none}
   .city-grid > *,.parcours > *,.partners > *,.related > *,.gal > *{scroll-snap-align:start}
+  .gal.gal-quotes{
+    display:flex;flex-direction:column;grid-auto-flow:row;grid-auto-columns:unset;
+    overflow:visible;margin-inline:0;padding:0;gap:12px;scroll-snap-type:none}
+  .gal.gal-quotes > *{scroll-snap-align:unset}
   .related a,.partner{height:100%}
   .region-block+.region-block{margin-top:32px}
   .region-h{font-size:21px;margin-bottom:12px}

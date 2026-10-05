@@ -39,10 +39,12 @@ const video = item.type === "testi" && !!item.video;
       </div>
     )}
     <div class="body">
-      <span class="type">{item.video ? "Témoignage vidéo" : "Témoignage"} {item.demo && <span class="ph">exemple</span>}</span>
-      <span class="stars" role="img" aria-label="5 étoiles sur 5">★★★★★</span>
+      {item.demo && <span class="type">Témoignage <span class="ph">exemple</span></span>}
+      <div class="who-row">
+        <span class="avatar" aria-hidden="true">{initials(item.name)}</span>
+        <div><b>{item.name}</b><span>{item.from} · {item.project}</span></div>
+      </div>
       <blockquote class="quote">{item.text}</blockquote>
-      <div class="who-row"><span class="avatar" aria-hidden="true">{initials(item.name)}</span><div><b>{item.name}</b><span>{item.from} · {item.project}</span></div></div>
     </div>
   </>}
 </article>

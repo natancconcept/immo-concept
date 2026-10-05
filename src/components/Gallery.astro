@@ -4,15 +4,16 @@ import GalleryCard from "./GalleryCard.astro";
 import { GAL_TYPES, matchesFilter, type GalleryItem, type GalFilter } from "../data/gallery";
 interface Props { items: GalleryItem[]; filters?: boolean; perPage?: number }
 const { items, filters = false, perPage = 9 } = Astro.props;
-const keys = Object.keys(GAL_TYPES) as GalFilter[];
+const keys = (Object.keys(GAL_TYPES) as GalFilter[]).filter((k) => k === "all" || items.some((g) => matchesFilter(g, k)));
+const quotes = items.length > 0 && items.every((g) => g.type === "testi");
 ---
 <div class="gallery" data-per-page={filters ? perPage : undefined}>
-  {filters && (
+  {filters && keys.length > 1 && (
     <div class="gal-filters" role="group" aria-label="Filtrer les réalisations">
       {keys.map((k) => <button type="button" data-f={k} aria-pressed={k === "all" ? "true" : "false"}>{GAL_TYPES[k]}<small>{items.filter((g) => matchesFilter(g, k)).length}</small></button>)}
     </div>
   )}
-  <div class="gal">
+  <div class:list={["gal", { "gal-quotes": quotes }]}>
     {items.map((it, i) => <GalleryCard item={it} hidden={filters && i >= perPage} />)}
   </div>
   {filters && items.length > perPage && <div class="gal-more"><button type="button" class="btn btn-ghost">Voir plus de réalisations</button></div>}

@@ -6,6 +6,7 @@ import Simulator from "../components/Simulator.astro";
 import BeforeAfter from "../components/BeforeAfter.astro";
 import FormSection from "../components/FormSection.astro";
 import Related from "../components/Related.astro";
+import Testimonials from "../components/Testimonials.astro";
 import { CITIES } from "../data/cities";
 import { PUBLIC_PROJECTS } from "../data/gallery";
 import { shekK } from "../lib/format";
@@ -121,6 +122,7 @@ const yieldOf = (c: (typeof CITIES)[number]) => (c.rent * 12 / c.m2 * 100).toFix
     </div>
   </section>
 
+  <Testimonials />
   <FormSection eyebrow="Votre projet" title="Parlons de votre investissement" lead="Quelques questions, puis un conseiller vous envoie une première étude chiffrée." goal="invest" />
   <Related exclude="/investissement" />
 </Base>

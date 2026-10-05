@@ -6,6 +6,7 @@ import Photo from "../components/Photo.astro";
 import Simulator from "../components/Simulator.astro";
 import FormSection from "../components/FormSection.astro";
 import Related from "../components/Related.astro";
+import Testimonials from "../components/Testimonials.astro";
 
 const FAQ = [
   ["Je vis en France, pouvez‑vous tout gérer à distance ?", "Oui. Nous visitons le bien, organisons les travaux, trouvons les locataires et gérons le quotidien. Vous recevez photos, devis et comptes rendus sur WhatsApp, et vous validez chaque décision importante."],
@@ -79,6 +80,7 @@ const faqLd = { "@context": "https://schema.org", "@type": "FAQPage", mainEntity
     </div>
   </section>
 
+  <Testimonials />
   <FormSection eyebrow="Votre bien" title="Confiez‑nous votre bien" lead="Quelques questions sur votre bien et vos besoins, puis un conseiller vous recontacte sur WhatsApp." goal="gestion" />
   <Related exclude="/gestion" />
 </Base>
